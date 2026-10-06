@@ -133,7 +133,7 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
   });
 
   async function setup() {
-    repo = makeRepo();
+    repo = await makeRepo();
     const inventory = new InventoryService(repo);
     const fake = new FakeUzum();
     const uzum = new UzumSyncService(repo, inventory, fake, { now: () => NOW });
@@ -303,5 +303,25 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     await uzum.sync();
     expect((await stock())['HOODIE-QORA']!.own).toBe(70);
     expect((await inventory.getProduct(twin.id)).stock.own).toBe(50);
+  });
+
+  it('vaqt cheklangan bo’lsa, yangilash bosqichma-bosqich davom etadi va natija bir xil', async () => {
+    const { uzum, fake, stock } = await setup();
+    fake.invoices = [invoice(1, [{ skuId: 11, qty: 30 }])];
+    // Juda kichik vaqt: har chaqiruvda faqat bitta bosqich
+    let calls = 0;
+    let report = await uzum.sync({ budgetMs: 0 });
+    calls++;
+    while (!report.done && calls < 20) {
+      report = await uzum.sync({ budgetMs: 0 });
+      calls++;
+    }
+    expect(report.done).toBe(true);
+    expect(calls).toBeGreaterThan(1);
+    expect((await stock())['HOODIE-QORA']!.own).toBe(70);
+    // Keyingi to'liq aylana hech narsani takrorlamaydi
+    const again = await uzum.sync();
+    expect(again.done).toBe(true);
+    expect((await stock())['HOODIE-QORA']!.own).toBe(70);
   });
 });

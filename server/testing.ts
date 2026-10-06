@@ -4,11 +4,14 @@ import { expect } from 'vitest';
 import { AppError } from './services/inventory.ts';
 import { MemoryRepository } from './storage/memory/memoryRepository.ts';
 import type { Repository } from './storage/repository.ts';
+import { createPgliteDriver } from './storage/postgres/pgliteDriver.ts';
+import { PostgresRepository } from './storage/postgres/postgresRepository.ts';
 import { SqliteRepository } from './storage/sqlite/sqliteRepository.ts';
 
-export const adapters: [string, () => Repository][] = [
+export const adapters: [string, () => Repository | Promise<Repository>][] = [
   ['memory', () => new MemoryRepository()],
   ['sqlite', () => new SqliteRepository(':memory:')],
+  ['postgres', async () => new PostgresRepository(await createPgliteDriver())],
 ];
 
 export async function expectAppError(promise: Promise<unknown>, code: string): Promise<AppError> {

@@ -1,0 +1,25 @@
+# Netlify: interfeys — statik sayt (web/dist), API va Uzum yangilash — Netlify Functions (netlify/functions).
+# Kerakli sozlamalar (Site configuration → Environment variables): README'dagi "Netlify'ga joylash" bo'limiga qarang.
+
+[build]
+  command = "npm run build"
+  publish = "web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  node_bundler = "esbuild"
+  # pg'ni bundle qilmasdan node_modules'dan olamiz (ixtiyoriy native moduli bor).
+  external_node_modules = ["pg"]
+
+# Ilova sahifalari (React router): har qanday yo'l index.html'ga. /api/* funksiyaga ketadi (funksiya yo'li ustun turadi).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

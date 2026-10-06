@@ -42,7 +42,18 @@ const KEY = {
   lastSyncAt: 'uzum.lastSyncAt',
   lastError: 'uzum.lastError',
   fingerprint: (kind: string, id: number) => `uzum.fp.${kind}.${id}`,
+  /** Keyingi bajariladigan bosqich (bosqichli yangilash uchun). */
+  stage: 'uzum.stage',
+  /** Yangilash qulfi: shu vaqtgacha (ms) boshqa yangilash boshlanmaydi. */
+  lock: 'uzum.lockUntil',
+  fbsOrderIds: 'uzum.fbsOrderIds',
+  /** Oxirgi yangilashda Uzum qaytargan do'konlar (keyingi bosqichlar shu ro'yxat bilan ishlaydi). */
+  shopIds: 'uzum.shopIds',
 };
+
+/** Yangilash bosqichlari tartibi. */
+const STAGES = ['shops', 'catalog', 'invoices', 'returns', 'fbs', 'orders', 'reprocess'] as const;
+type Stage = (typeof STAGES)[number];
 
 const PAGE_LIMIT = 40;
 const DOC_PAGE_SIZE = 50;
@@ -57,6 +68,8 @@ export interface SyncReport {
   linked: number;
   documents: number;
   changes: Record<UzumEventStatus, number>;
+  /** To'liq aylana tugadimi (vaqt cheklovi bo'lsa, bir necha chaqiruvda tugaydi). */
+  done: boolean;
 }
 
 interface Catalog {
@@ -184,20 +197,42 @@ export class UzumSyncService {
     await this.repo.setSetting(KEY.syncFrom, date);
   }
 
-  // ---------- To'liq sinxronlash ----------
+  // ---------- To'liq sinxronlash (bosqichma-bosqich) ----------
 
-  async sync(): Promise<SyncReport> {
-    if (!this.api) {
-      throw new AppError(503, 'UZUM_NOT_CONFIGURED', "Uzum ulanmagan. .env fayliga UZUM_API_KEY ni yozib, serverni qayta ishga tushiring.");
+  /**
+   * Uzumdan yangilash. `budgetMs` — shu chaqiruv uchun vaqt: Netlify funksiyalari vaqt bilan cheklangan, shuning uchun
+   * yangilash bosqichlarga bo'lingan. Vaqt tugasa — to'xtaydi, keyingi chaqiruv to'xtagan bosqichdan davom etadi.
+   * `done: true` — to'liq aylana tugadi. Lokal serverda vaqt cheklovi yo'q — hammasi bir martada.
+   */
+  async sync(opts: { budgetMs?: number } = {}): Promise<SyncReport> {
+    const api = this.api;
+    if (!api) {
+      throw new AppError(503, 'UZUM_NOT_CONFIGURED', "Uzum ulanmagan. UZUM_API_KEY sozlamasini kiriting va serverni qayta ishga tushiring.");
     }
-    if (this.running) throw new AppError(409, 'SYNC_RUNNING', "Yangilash allaqachon ketyapti. Bir ozdan keyin qarang.");
+    const budget = opts.budgetMs ?? Infinity;
+    const started = Date.now();
+    await this.acquireLock(budget);
     this.running = true;
     const startedAt = this.now().toISOString();
-    const report: SyncReport = { startedAt, finishedAt: startedAt, catalogSkus: 0, linked: 0, documents: 0, changes: emptyCounts() };
+    const report: SyncReport = { startedAt, finishedAt: startedAt, catalogSkus: 0, linked: 0, documents: 0, changes: emptyCounts(), done: false };
     try {
-      await this.runSync(this.api, report);
+      let stage = Number((await this.repo.getSetting(KEY.stage)) ?? 0) || 0;
+      if (stage >= STAGES.length) stage = 0;
+      let ran = 0;
+      while (stage < STAGES.length) {
+        // Har chaqiruvda kamida bitta bosqich; keyingisi faqat vaqt yetarli bo'lsa.
+        if (ran > 0 && Date.now() - started > budget / 2) break;
+        await this.runStage(api, STAGES[stage]!, report);
+        stage += 1;
+        ran += 1;
+        await this.repo.setSetting(KEY.stage, String(stage));
+      }
       report.finishedAt = this.now().toISOString();
-      await this.repo.setSetting(KEY.lastSyncAt, report.finishedAt);
+      if (stage >= STAGES.length) {
+        report.done = true;
+        await this.repo.setSetting(KEY.stage, '0');
+        await this.repo.setSetting(KEY.lastSyncAt, report.finishedAt);
+      }
       await this.repo.setSetting(KEY.lastError, null);
       return report;
     } catch (err) {
@@ -206,127 +241,181 @@ export class UzumSyncService {
       throw err instanceof AppError ? err : new AppError(502, 'UZUM_SYNC_FAILED', message);
     } finally {
       this.running = false;
+      await this.repo.setSetting(KEY.lock, null);
     }
   }
 
-  private async runSync(api: UzumApi, report: SyncReport): Promise<void> {
+  /** Bir vaqtda faqat bitta yangilash (bir nechta server nusxasi bo'lsa ham). Qulf muddati o'tsa — bo'shaydi. */
+  private async acquireLock(budget: number): Promise<void> {
+    const ttl = Number.isFinite(budget) ? budget + 60_000 : 30 * 60_000;
+    await this.repo.transaction(async (tx) => {
+      const until = Number((await tx.getSetting(KEY.lock)) ?? 0);
+      if (this.running || until > Date.now()) {
+        throw new AppError(409, 'SYNC_RUNNING', "Yangilash allaqachon ketyapti. Bir ozdan keyin qarang.");
+      }
+      await tx.setSetting(KEY.lock, String(Date.now() + ttl));
+    });
+  }
+
+  private async syncFrom(): Promise<string> {
     let syncFrom = await this.repo.getSetting(KEY.syncFrom);
     if (!syncFrom) {
       // Birinchi ulanish: shu kundan boshlab hisoblanadi (eski hujjatlar ikki marta hisoblanmasligi uchun).
       syncFrom = todayIso(this.now());
       await this.repo.setSetting(KEY.syncFrom, syncFrom);
     }
+    return syncFrom;
+  }
 
-    // 1. Do'konlar: har bir Uzum do'koni — ilovada alohida do'kon
-    let uzumShops = await api.shops();
-    if (this.opts.shopIds?.length) uzumShops = uzumShops.filter((s) => this.opts.shopIds!.includes(s.id));
-    if (uzumShops.length === 0) throw new AppError(502, 'NO_SHOPS', "Uzum'da do'kon topilmadi. API kaliti to'g'ri do'konga tegishlimi?");
-    await this.repo.transaction(async (tx) => {
-      for (const u of uzumShops) {
-        const name = u.name?.trim() || `Do'kon ${u.id}`;
-        const local = await tx.findShopByUzumId(u.id);
-        if (!local) await tx.createShop({ name, uzumShopId: u.id });
-        else if (local.name !== name) await tx.updateShop(local.id, { name });
-      }
-    });
-    const shopIds = uzumShops.map((s) => s.id);
+  /** Uzum'ning o'zi oxirgi marta qaytargan do'konlar ("shops" bosqichida saqlanadi). */
+  private async uzumShopIds(): Promise<number[]> {
+    return JSON.parse((await this.repo.getSetting(KEY.shopIds)) ?? '[]') as number[];
+  }
 
-    // 2. Katalog: SKU, to'liq kod, Uzumdagi qoldiq — har bir do'kon uchun
-    const skus: UzumSku[] = [];
-    const nowIso = this.now().toISOString();
-    for (const shopId of shopIds) {
-      const cards = [];
-      for (let page = 0; page < PAGE_LIMIT; page++) {
-        const { productList, totalProductsAmount } = await api.productsPage(shopId, page, PRODUCT_PAGE_SIZE);
-        cards.push(...productList);
-        if (productList.length < PRODUCT_PAGE_SIZE) break;
-        if (totalProductsAmount !== undefined && (page + 1) * PRODUCT_PAGE_SIZE >= totalProductsAmount) break;
-      }
-      skus.push(...mapCatalog(cards, shopId, nowIso));
-    }
-    await this.repo.transaction((tx) => tx.replaceUzumSkus(skus));
-    report.catalogSkus = skus.length;
-    const catalog = buildCatalog(skus, await this.repo.listShops());
-    report.linked = await this.autoLink(skus, catalog);
-
+  private async runStage(api: UzumApi, stage: Stage, report: SyncReport): Promise<void> {
+    const syncFrom = await this.syncFrom();
     const track = (status: UzumEventStatus | null) => {
       if (status) report.changes[status] += 1;
     };
-
-    // 3. Yetkazib berish nakladnoylari (FBO) → "Uzumga jo'natdim"
-    for (let page = 0; page < PAGE_LIMIT; page++) {
-      const invoices = await api.invoicesPage(page, DOC_PAGE_SIZE);
-      const inRange = invoices.filter((inv) => (parseUzumDate(inv.dateCreated) ?? '9999') >= syncFrom);
-      for (const inv of inRange) {
-        if (typeof inv.shopId === 'number' && !shopIds.includes(inv.shopId)) continue;
-        const fp = this.invoiceFingerprint(inv);
-        if ((await this.repo.getSetting(KEY.fingerprint('invoice', inv.id))) === fp) continue;
-        const products = inv.productForInvoiceDto?.length
-          ? inv.productForInvoiceDto
-          : await api.invoiceProducts(inv.shopId ?? shopIds[0]!, inv.id);
-        for (const d of invoiceEvents(inv, products)) track(await this.processDraft(d, catalog));
-        await this.repo.setSetting(KEY.fingerprint('invoice', inv.id), fp);
-        report.documents += 1;
-      }
-      if (invoices.length < DOC_PAGE_SIZE || this.allOlder(invoices.map((i) => i.dateCreated), syncFrom)) break;
-    }
-
-    // 4. Qaytarish nakladnoylari (Uzum omboridan sotuvchiga) → "Qaytdi"
-    for (let page = 0; page < PAGE_LIMIT; page++) {
-      const returns = await api.returnsPage(page, DOC_PAGE_SIZE);
-      for (const ret of returns) {
-        const date = parseUzumDate(ret.completedDate) ?? parseUzumDate(ret.dateCreated) ?? '9999';
-        if (date < syncFrom) continue;
-        const fp = `${ret.status}|${ret.completedDate}|${ret.canceledDate}|${ret.returnItems?.length ?? 0}`;
-        if ((await this.repo.getSetting(KEY.fingerprint('return', ret.id))) === fp) continue;
-        const drafts = returnEvents(ret);
-        if (drafts === null) continue; // hali yakunlanmagan
-        for (const d of drafts) track(await this.processDraft(d, catalog));
-        await this.repo.setSetting(KEY.fingerprint('return', ret.id), fp);
-        report.documents += 1;
-      }
-      if (returns.length < DOC_PAGE_SIZE || this.allOlder(returns.map((r) => r.dateCreated), syncFrom)) break;
-    }
-
     const now = this.now();
     const windowStart = new Date(now.getTime() - ORDER_WINDOW_DAYS * 86_400_000);
     const dateFrom = Math.max(new Date(`${syncFrom}T00:00:00`).getTime(), windowStart.getTime());
 
-    // 5. FBS/DBS buyurtmalar → "Sotildi (FBS)": omborimdan
-    const fbsOrderIds = new Set<number>();
-    const fbsOrders: RawFbsOrder[] = [];
-    for (const status of FBS_STATUSES) {
-      for (let page = 0; page < PAGE_LIMIT; page++) {
-        const orders = await api.fbsOrdersPage({ shopIds, status, dateFrom, dateTo: now.getTime(), page, size: DOC_PAGE_SIZE });
-        fbsOrders.push(...orders);
-        if (orders.length < DOC_PAGE_SIZE) break;
+    switch (stage) {
+      // 1. Do'konlar: har bir Uzum do'koni — ilovada alohida do'kon
+      case 'shops': {
+        let uzumShops = await api.shops();
+        if (this.opts.shopIds?.length) uzumShops = uzumShops.filter((s) => this.opts.shopIds!.includes(s.id));
+        if (uzumShops.length === 0) throw new AppError(502, 'NO_SHOPS', "Uzum'da do'kon topilmadi. API kaliti to'g'ri do'konga tegishlimi?");
+        await this.repo.transaction(async (tx) => {
+          for (const u of uzumShops) {
+            const name = u.name?.trim() || `Do'kon ${u.id}`;
+            const local = await tx.findShopByUzumId(u.id);
+            if (!local) await tx.createShop({ name, uzumShopId: u.id });
+            else if (local.name !== name) await tx.updateShop(local.id, { name });
+          }
+        });
+        await this.repo.setSetting(KEY.shopIds, JSON.stringify(uzumShops.map((s) => s.id)));
+        return;
       }
-    }
-    for (const order of fbsOrders) {
-      if (fbsOrderIds.has(order.id)) continue;
-      fbsOrderIds.add(order.id);
-      for (const d of fbsOrderEvents(order)) {
-        if (d.date < syncFrom) continue;
-        track(await this.processDraft(d, catalog));
-      }
-      report.documents += 1;
-    }
 
-    // 6. Sotuvlar ro'yxati → "Sotildi": Uzum omboridan (FBS buyurtmalar yuqorida hisoblangan)
-    for (let page = 0; page < PAGE_LIMIT * 5; page++) {
-      const { orderItems, totalElements } = await api.ordersPage({ shopIds, dateFrom, dateTo: now.getTime(), page, size: DOC_PAGE_SIZE });
-      const fbo = orderItems.filter((o) => !fbsOrderIds.has(o.orderId ?? o.id));
-      for (const d of financeOrderEvents(fbo)) {
-        if (d.date < syncFrom) continue;
-        track(await this.processDraft(d, catalog));
+      // 2. Katalog: SKU, to'liq kod, Uzumdagi qoldiq — har bir do'kon uchun
+      case 'catalog': {
+        const skus: UzumSku[] = [];
+        const nowIso = now.toISOString();
+        for (const shopId of await this.uzumShopIds()) {
+          const cards = [];
+          for (let page = 0; page < PAGE_LIMIT; page++) {
+            const { productList, totalProductsAmount } = await api.productsPage(shopId, page, PRODUCT_PAGE_SIZE);
+            cards.push(...productList);
+            if (productList.length < PRODUCT_PAGE_SIZE) break;
+            if (totalProductsAmount !== undefined && (page + 1) * PRODUCT_PAGE_SIZE >= totalProductsAmount) break;
+          }
+          // Bitta SKU ikki marta kelmasin (sahifalar orasida yoki do'konlar orasida).
+          for (const sku of mapCatalog(cards, shopId, nowIso)) if (!skus.some((x) => x.skuId === sku.skuId)) skus.push(sku);
+        }
+        await this.repo.transaction((tx) => tx.replaceUzumSkus(skus));
+        report.catalogSkus = skus.length;
+        report.linked += await this.autoLink(skus, buildCatalog(skus, await this.repo.listShops()));
+        return;
       }
-      report.documents += orderItems.length;
-      if (orderItems.length < DOC_PAGE_SIZE) break;
-      if (totalElements !== undefined && (page + 1) * DOC_PAGE_SIZE >= totalElements) break;
-    }
 
-    // 7. Oldin bog'lanmagan yoki kutilayotganlarni qayta urinish (katalog yangilangan bo'lishi mumkin)
-    for (const status of await this.reprocessStored(['unmatched', 'pending'], catalog)) track(status);
+      // 3. Yetkazib berish nakladnoylari (FBO) → "Uzumga jo'natdim"
+      case 'invoices': {
+        const catalog = await this.loadCatalog();
+        const shopIds = await this.uzumShopIds();
+        for (let page = 0; page < PAGE_LIMIT; page++) {
+          const invoices = await api.invoicesPage(page, DOC_PAGE_SIZE);
+          const inRange = invoices.filter((inv) => (parseUzumDate(inv.dateCreated) ?? '9999') >= syncFrom);
+          for (const inv of inRange) {
+            if (typeof inv.shopId === 'number' && !shopIds.includes(inv.shopId)) continue;
+            const fp = this.invoiceFingerprint(inv);
+            if ((await this.repo.getSetting(KEY.fingerprint('invoice', inv.id))) === fp) continue;
+            const products = inv.productForInvoiceDto?.length
+              ? inv.productForInvoiceDto
+              : await api.invoiceProducts(inv.shopId ?? shopIds[0]!, inv.id);
+            for (const d of invoiceEvents(inv, products)) track(await this.processDraft(d, catalog));
+            await this.repo.setSetting(KEY.fingerprint('invoice', inv.id), fp);
+            report.documents += 1;
+          }
+          if (invoices.length < DOC_PAGE_SIZE || this.allOlder(invoices.map((i) => i.dateCreated), syncFrom)) break;
+        }
+        return;
+      }
+
+      // 4. Qaytarish nakladnoylari (Uzum omboridan sotuvchiga) → "Qaytdi"
+      case 'returns': {
+        const catalog = await this.loadCatalog();
+        for (let page = 0; page < PAGE_LIMIT; page++) {
+          const returns = await api.returnsPage(page, DOC_PAGE_SIZE);
+          for (const ret of returns) {
+            const date = parseUzumDate(ret.completedDate) ?? parseUzumDate(ret.dateCreated) ?? '9999';
+            if (date < syncFrom) continue;
+            const fp = `${ret.status}|${ret.completedDate}|${ret.canceledDate}|${ret.returnItems?.length ?? 0}`;
+            if ((await this.repo.getSetting(KEY.fingerprint('return', ret.id))) === fp) continue;
+            const drafts = returnEvents(ret);
+            if (drafts === null) continue; // hali yakunlanmagan
+            for (const d of drafts) track(await this.processDraft(d, catalog));
+            await this.repo.setSetting(KEY.fingerprint('return', ret.id), fp);
+            report.documents += 1;
+          }
+          if (returns.length < DOC_PAGE_SIZE || this.allOlder(returns.map((r) => r.dateCreated), syncFrom)) break;
+        }
+        return;
+      }
+
+      // 5. FBS/DBS buyurtmalar → "Sotildi (FBS)": omborimdan
+      case 'fbs': {
+        const catalog = await this.loadCatalog();
+        const shopIds = await this.uzumShopIds();
+        const fbsOrderIds = new Set<number>();
+        const fbsOrders: RawFbsOrder[] = [];
+        for (const status of FBS_STATUSES) {
+          for (let page = 0; page < PAGE_LIMIT; page++) {
+            const orders = await api.fbsOrdersPage({ shopIds, status, dateFrom, dateTo: now.getTime(), page, size: DOC_PAGE_SIZE });
+            fbsOrders.push(...orders);
+            if (orders.length < DOC_PAGE_SIZE) break;
+          }
+        }
+        for (const order of fbsOrders) {
+          if (fbsOrderIds.has(order.id)) continue;
+          fbsOrderIds.add(order.id);
+          for (const d of fbsOrderEvents(order)) {
+            if (d.date < syncFrom) continue;
+            track(await this.processDraft(d, catalog));
+          }
+          report.documents += 1;
+        }
+        // Keyingi bosqich (sotuvlar ro'yxati) shu buyurtmalarni ikkinchi marta hisoblamasligi uchun.
+        await this.repo.setSetting(KEY.fbsOrderIds, JSON.stringify([...fbsOrderIds]));
+        return;
+      }
+
+      // 6. Sotuvlar ro'yxati → "Sotildi": Uzum omboridan (FBS buyurtmalar oldingi bosqichda hisoblangan)
+      case 'orders': {
+        const catalog = await this.loadCatalog();
+        const shopIds = await this.uzumShopIds();
+        const fbsOrderIds = new Set<number>(JSON.parse((await this.repo.getSetting(KEY.fbsOrderIds)) ?? '[]'));
+        for (let page = 0; page < PAGE_LIMIT * 5; page++) {
+          const { orderItems, totalElements } = await api.ordersPage({ shopIds, dateFrom, dateTo: now.getTime(), page, size: DOC_PAGE_SIZE });
+          const fbo = orderItems.filter((o) => !fbsOrderIds.has(o.orderId ?? o.id));
+          for (const d of financeOrderEvents(fbo)) {
+            if (d.date < syncFrom) continue;
+            track(await this.processDraft(d, catalog));
+          }
+          report.documents += orderItems.length;
+          if (orderItems.length < DOC_PAGE_SIZE) break;
+          if (totalElements !== undefined && (page + 1) * DOC_PAGE_SIZE >= totalElements) break;
+        }
+        return;
+      }
+
+      // 7. Oldin bog'lanmagan yoki kutilayotganlarni qayta urinish (katalog yangilangan bo'lishi mumkin)
+      case 'reprocess': {
+        for (const status of await this.reprocessStored(['unmatched', 'pending'])) track(status);
+        return;
+      }
+    }
   }
 
   private invoiceFingerprint(inv: RawInvoice): string {

@@ -15,6 +15,8 @@ export interface AppDeps {
   auth: AuthProvider;
   sessions: SessionSigner;
   secureCookies?: boolean;
+  /** Bitta "Hozir yangilash" so'rovi uchun vaqt (ms). Serverless'da cheklangan — qolgani keyingi so'rovda. */
+  syncBudgetMs?: number;
 }
 
 type Env = { Variables: { user: User; shop: Shop } };
@@ -180,7 +182,9 @@ export function createApp(deps: AppDeps) {
 
   app.get('/uzum/status', async (c) => c.json(await uzum.status(c.get('shop'))));
 
-  app.post('/uzum/sync', async (c) => c.json({ report: await uzum.sync(), status: await uzum.status(c.get('shop')) }));
+  app.post('/uzum/sync', async (c) =>
+    c.json({ report: await uzum.sync({ budgetMs: deps.syncBudgetMs }), status: await uzum.status(c.get('shop')) }),
+  );
 
   app.put('/uzum/sync-from', async (c) => {
     const { date } = await readJson(c);

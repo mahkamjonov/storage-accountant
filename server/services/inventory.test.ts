@@ -11,7 +11,7 @@ describe.each(adapters)('InventoryService (%s)', (_name, makeRepo) => {
   });
 
   async function setup() {
-    repo = makeRepo();
+    repo = await makeRepo();
     const service = new InventoryService(repo);
     const shop = (await service.listShops())[0]!.id;
     return { service, shop };

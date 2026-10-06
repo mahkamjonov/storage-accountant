@@ -2,7 +2,7 @@
 import { buildVariantMatrix, suggestCode, todayIso } from '../domain/index.ts';
 import { createContainer } from './container.ts';
 
-const { inventory, repo } = createContainer();
+const { inventory, repo } = await createContainer();
 
 function daysAgo(n: number): string {
   const d = new Date();

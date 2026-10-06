@@ -130,6 +130,8 @@ export interface SyncReport {
   linked: number;
   documents: number;
   changes: Record<UzumEventStatus, number>;
+  /** To'liq aylana tugadimi (aks holda — yana chaqirish kerak). */
+  done: boolean;
 }
 
 export type CatalogSku = UzumSku & { variantId: string | null };

@@ -7,9 +7,9 @@ import { config } from './config.ts';
 import { createContainer } from './container.ts';
 import { createApp } from './http/app.ts';
 
-const container = createContainer();
+const container = await createContainer();
 const app = new Hono();
-app.route('/', createApp({ ...container, secureCookies: config.secureCookies }));
+app.route('/', createApp({ ...container, secureCookies: config.secureCookies, syncBudgetMs: config.syncBudgetMs }));
 
 // Qurilgan interfeys (npm run build) bo'lsa, shu serverning o'zi uni beradi.
 const dist = resolve('web/dist');

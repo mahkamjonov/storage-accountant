@@ -50,7 +50,8 @@ cp .env.example .env
 | `APP_LOGIN`, `APP_PASSWORD` | Kirish uchun login va parol | `sotuvchi` / `ombor2026` |
 | `APP_PORT` | Server porti | `8787` |
 | `DATA_DIR` | Baza fayli va sessiya kaliti papkasi | `data` |
-| `DB_DRIVER` | Qaysi saqlash adapteri | `sqlite` |
+| `DATABASE_URL` | Postgres manzili. Berilsa — Postgres ishlatiladi (Netlify DB'da `NETLIFY_DATABASE_URL` avtomatik) | — |
+| `DB_DRIVER` | Adapterni majburlash: `sqlite` yoki `postgres` | `DATABASE_URL` bo'lsa `postgres`, aks holda `sqlite` |
 | `SECURE_COOKIES` | HTTPS orqali ishlatilsa `1` | `0` |
 | `UZUM_API_KEY` | Uzum Seller API kaliti. Bo'sh bo'lsa — integratsiya o'chiq | — |
 | `UZUM_SHOP_IDS` | Faqat shu do'konlar (vergul bilan). Bo'sh — kalitning barcha do'konlari | — |
@@ -76,6 +77,38 @@ npm start
 
 Endi ilova va API bitta serverda: **http://localhost:8787**.
 
+### Netlify'ga joylash (24/7)
+
+Netlify'da ilova shunday ishlaydi:
+- **Interfeys** — statik sayt (`web/dist`).
+- **API** — Netlify Function (`netlify/functions/api.mts`), lokal serverdagi xuddi shu kod.
+- **Baza** — Postgres. Netlify'da doimiy disk yo'q, shuning uchun SQLite ishlamaydi; Netlify DB (Neon) yoki istalgan Postgres ishlatiladi.
+- **Uzum yangilash** — rejali funksiya (`netlify/functions/uzum-sync.mts`) har 5 daqiqada ishga tushadi. Netlify funksiyalari vaqt bilan cheklangan, shuning uchun yangilash bosqichlarga bo'lingan: vaqt tugasa, keyingi safar to'xtagan bosqichdan davom etadi. "Hozir yangilash" tugmasi ham shunday ishlaydi.
+
+#### Bir martalik sozlash
+
+1. **Saytni yarating**: [app.netlify.com](https://app.netlify.com) → **Add new site → Import an existing project → GitHub** → `storage-accountant` repozitoriyasini tanlang. Build sozlamalari `netlify.toml`dan avtomatik olinadi — hech narsani o'zgartirmang.
+2. **Bazani ulang**: sayt sahifasida **Extensions → Neon** (Netlify DB) → bazani yarating. Netlify `NETLIFY_DATABASE_URL`ni o'zi qo'shadi. O'zingizning Postgres'ingiz bo'lsa, uning o'rniga `DATABASE_URL` qo'shing. Jadvallar birinchi so'rovda avtomatik yaratiladi.
+3. **Sozlamalarni kiriting**: **Site configuration → Environment variables**:
+
+| O'zgaruvchi | Qiymat |
+|---|---|
+| `APP_LOGIN` | Kirish logini (masalan, `sotuvchi`) |
+| `APP_PASSWORD` | **Kuchli parol** — sayt internetda ochiq. Kiritilmasa, ilova ishga tushmaydi |
+| `SESSION_SECRET` | Kamida 32 belgili tasodifiy qator (masalan, [1password.com/password-generator](https://1password.com/password-generator) dan) |
+| `UZUM_API_KEY` | Uzum Seller API kaliti |
+
+4. **Qayta joylang**: **Deploys → Trigger deploy → Deploy site**. Tayyor: `https://<sayt-nomi>.netlify.app`.
+5. Saytga kiring → **Uzum** → do'konni tanlang → **Hammasini import qilish** → keyin omborimdagi sonlarni **Sanab tuzatish** bilan kiriting.
+
+Shundan keyin GitHub'dagi `main` tarmog'iga har bir push saytni avtomatik yangilaydi.
+
+> Kompyuterdagi lokal ma'lumotlar (SQLite) Netlify'ga ko'chmaydi — Netlify'da baza bo'sh boshlanadi. Mahsulotlar Uzumdan import qilinadi.
+
+#### Tekin rejaga sig'adimi
+
+Ha, odatdagi foydalanishda: funksiya chaqiruvlari (har 5 daqiqada yangilash ≈ 9 000/oy + interfeys so'rovlari) va Neon'ning bepul bazasi bepul limitlar ichida. Netlify o'z limitlarini o'zgartirishi mumkin — **Usage** sahifasida kuzatib boring.
+
 ### Testlar
 
 ```bash
@@ -83,7 +116,7 @@ npm test
 ```
 
 - `domain/stock.test.ts` — qoldiq hisoblash logikasi (sof funksiyalar), qabul mezonidagi stsenariy ham shu yerda.
-- `server/services/inventory.test.ts` — biznes oqimlari. **Bir xil testlar har bir saqlash adapteri uchun** (xotira va SQLite) ishga tushadi.
+- `server/services/inventory.test.ts` — biznes oqimlari. **Bir xil testlar har bir saqlash adapteri uchun** (xotira, SQLite va Postgres) ishga tushadi. Postgres testlari PGlite bilan — tashqi server kerak emas.
 - `server/integrations/uzum/sync.test.ts` — Uzum sinxronlash soxta Uzum API bilan: nakladnoy → omborimdan ayirish, takrorlanmaslik, bekor qilish, son o'zgarishi, kutilayotgan yozuv, bog'lash, import.
 - `server/http/app.test.ts` — API: kirish, himoya, xato javoblari.
 
@@ -99,7 +132,8 @@ domain/                 Sof logika — baza, server va brauzerga bog'liq emas
   uzum.ts               Uzum hodisalari va katalog turlari
 server/
   storage/repository.ts Saqlash qatlami interfeysi (shartnoma)
-  storage/sqlite/       SQLite adapteri (hozir ishlatiladi)
+  storage/sqlite/       SQLite adapteri (lokal kompyuterda)
+  storage/postgres/     Postgres adapteri (Netlify / Neon); drayverlar: pg (server), PGlite (testlar)
   storage/memory/       Xotiradagi adapter (testlar va namuna uchun)
   auth/                 Avtorizatsiya interfeysi, bitta akkauntli provayder, sessiya
   services/inventory.ts Biznes oqimlari — faqat Repository interfeysini biladi
@@ -108,12 +142,14 @@ server/
   http/app.ts           API yo'llari
   container.ts          Qaysi adapter/provayder ishlatilishi faqat shu yerda hal qilinadi
 web/                    Interfeys (React + Vite), PWA fayllari web/public ichida
+netlify/functions/      Netlify: api.mts (API), uzum-sync.mts (har 5 daqiqada Uzum yangilash)
+netlify.toml            Netlify build va yo'naltirish sozlamalari
 ```
 
 Qatlamlar bir-birini shunday ko'radi:
 
 ```
-web  →  HTTP API  →  InventoryService  →  Repository (interfeys)  ←  SqliteRepository
+web  →  HTTP API  →  InventoryService  →  Repository (interfeys)  ←  SqliteRepository / PostgresRepository
                              ↓
                     domain (sof funksiyalar)
 ```
@@ -122,17 +158,17 @@ Interfeys ham serverdagi bilan bir xil `domain` funksiyalarini ishlatadi: natija
 
 ## Boshqa bazaga o'tish: yangi adapter yozish
 
-Ilovaning qolgan qismi bazani bilmaydi, faqat `server/storage/repository.ts` dagi `Repository` interfeysiga murojaat qiladi. Masalan, Postgres'ga o'tish uchun:
+Ilovaning qolgan qismi bazani bilmaydi, faqat `server/storage/repository.ts` dagi `Repository` interfeysiga murojaat qiladi. Postgres adapteri aynan shu yo'l bilan qo'shilgan — ilovaning boshqa hech bir qismi o'zgarmadi. Yangi baza (masalan, MySQL) uchun:
 
-1. **Adapter yozing**: `server/storage/postgres/postgresRepository.ts` faylida `Repository` interfeysini amalga oshiring. Eng qisqa namuna — `server/storage/memory/memoryRepository.ts`, SQL namunasi — `server/storage/sqlite/sqliteRepository.ts`.
+1. **Adapter yozing**: `server/storage/<baza>/...Repository.ts` faylida `Repository` interfeysini amalga oshiring. Namunalar: eng qisqasi — `server/storage/memory/memoryRepository.ts`, SQL — `server/storage/postgres/postgresRepository.ts` va `server/storage/sqlite/sqliteRepository.ts`.
 2. **Qoidalarga amal qiling**:
    - `insertMovement` faqat yangi yozuv qo'shadi; yozuvlar o'zgartirilmaydi va o'chirilmaydi. Yagona o'zgarish — `voidMovement` (`voided_at` ni belgilash).
    - Qoldiq ustunini **qo'shmang**: qoldiq har doim harakatlardan hisoblanadi.
    - Artikul (`code`) katta-kichik harfsiz takrorlanmas bo'lsin — solishtirish `domain/variants.ts` dagi `normalizeCode` bilan. `uzumSkuId` ham takrorlanmas.
    - `saveUzumEvent` — `externalRef` bo'yicha "qo'shish yoki yangilash".
    - `listMovements` tartibi: `date` bo'yicha kamayish, keyin `createdAt` bo'yicha kamayish.
-   - `transaction(fn)` — `fn` ichidagi o'qish va yozish bir butun bajarilsin (Postgres'da `BEGIN … COMMIT` va mahsulot qatorini `SELECT … FOR UPDATE` bilan qulflash). Shu tufayli ikki so'rov bir vaqtda kelsa ham qoldiq manfiy bo'lmaydi.
-3. **Ulang**: `server/container.ts` dagi `createRepository()` ga yangi `case` qo'shing va `.env` da `DB_DRIVER=postgres` qiling.
+   - `transaction(fn)` — `fn` ichidagi o'qish va yozish bir butun bajarilsin va yozuvchi tranzaksiyalar navbat bilan ketsin (Postgres adapterida `BEGIN … COMMIT` va `pg_advisory_xact_lock`). Shu tufayli bir nechta so'rov (yoki bir nechta Netlify funksiyasi) bir vaqtda kelsa ham qoldiq manfiy bo'lmaydi.
+3. **Ulang**: `server/container.ts` dagi `createRepository()` ga yangi `case` qo'shing va `DB_DRIVER` sozlamasida uni tanlang.
 4. **Tekshiring**: `server/testing.ts` dagi `adapters` ro'yxatiga yangi adapterni qo'shing va `npm test` ni ishga tushiring. Servis va Uzum sinxronlash testlarining hammasi yangi adapterda ham ishlaydi — barchasi o'tsa, adapter tayyor.
 
 Boshqa hech qaysi fayl (servis, API, interfeys) o'zgarmaydi.

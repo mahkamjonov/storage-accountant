@@ -7,13 +7,20 @@ import { HttpUzumApi } from './integrations/uzum/client.ts';
 import { UzumSyncService } from './integrations/uzum/sync.ts';
 import { InventoryService } from './services/inventory.ts';
 import type { Repository } from './storage/repository.ts';
-import { SqliteRepository } from './storage/sqlite/sqliteRepository.ts';
 
-export function createRepository(): Repository {
+/** Adapterlar faqat kerak bo'lganda yuklanadi (Netlify'da SQLite moduli umuman kerak emas). */
+export async function createRepository(): Promise<Repository> {
   switch (config.dbDriver) {
-    case 'sqlite':
+    case 'sqlite': {
+      const { SqliteRepository } = await import('./storage/sqlite/sqliteRepository.ts');
       return new SqliteRepository(config.sqlitePath);
-    // case 'postgres': return new PostgresRepository(process.env.DATABASE_URL!);
+    }
+    case 'postgres': {
+      if (!config.databaseUrl) throw new Error('DATABASE_URL sozlanmagan (Postgres manzili).');
+      const { createPgDriver } = await import('./storage/postgres/drivers.ts');
+      const { PostgresRepository } = await import('./storage/postgres/postgresRepository.ts');
+      return new PostgresRepository(await createPgDriver(config.databaseUrl));
+    }
     default:
       throw new Error(`Noma'lum DB_DRIVER: ${config.dbDriver}`);
   }
@@ -23,8 +30,8 @@ export function createAuthProvider(): AuthProvider {
   return new SingleAccountProvider(config.login, config.password);
 }
 
-export function createContainer() {
-  const repo = createRepository();
+export async function createContainer() {
+  const repo = await createRepository();
   const inventory = new InventoryService(repo);
   const uzumApi = config.uzumApiKey ? new HttpUzumApi(config.uzumApiKey, config.uzumApiUrl) : null;
   return {
@@ -36,4 +43,15 @@ export function createContainer() {
   };
 }
 
-export type Container = ReturnType<typeof createContainer>;
+export type Container = Awaited<ReturnType<typeof createContainer>>;
+
+let shared: Promise<Container> | null = null;
+
+/** Serverless funksiyalar uchun: bitta jarayonda konteyner bir marta yaratiladi va qayta ishlatiladi. */
+export function getContainer(): Promise<Container> {
+  shared ??= createContainer().catch((err) => {
+    shared = null;
+    throw err;
+  });
+  return shared;
+}

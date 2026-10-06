@@ -77,11 +77,12 @@ function NotConfigured() {
           Uzum sotuvchi kabinetida <b>Sozlamalar → API kalitlari</b> bo'limidan kalit yarating.
         </li>
         <li>
-          Loyiha papkasidagi <code>.env</code> fayliga yozing: <code>UZUM_API_KEY=kalitingiz</code>
+          Netlify'da: <b>Site configuration → Environment variables</b> → <code>UZUM_API_KEY</code> qo'shing. Kompyuterda:{' '}
+          <code>.env</code> fayliga <code>UZUM_API_KEY=kalitingiz</code>.
         </li>
-        <li>Serverni qayta ishga tushiring va shu sahifani yangilang.</li>
+        <li>Saytni qayta joylang (Netlify: Deploys → Trigger deploy) va shu sahifani yangilang.</li>
       </ol>
-      <p className="field-hint">Kalitni hech kimga yubormang va chatga yozmang — u faqat sizning kompyuteringizdagi .env faylida turadi.</p>
+      <p className="field-hint">Kalitni hech kimga yubormang va chatga yozmang.</p>
     </section>
   );
 }
@@ -108,14 +109,21 @@ function Connected() {
   async function sync() {
     setSyncing(true);
     try {
-      const { report } = await api.uzumSync();
-      const c = report.changes;
+      // Serverda bitta so'rov vaqt bilan cheklangan bo'lishi mumkin (Netlify) — tugaguncha davom ettiramiz.
+      const c = { applied: 0, cancelled: 0, pending: 0, unmatched: 0, ignored: 0 };
+      let linked = 0;
+      for (let i = 0; i < 20; i++) {
+        const { report } = await api.uzumSync();
+        for (const k of Object.keys(c) as (keyof typeof c)[]) c[k] += report.changes[k];
+        linked += report.linked;
+        if (report.done) break;
+      }
       const parts = [
         c.applied && `${c.applied} ta yangi yozuv`,
         c.cancelled && `${c.cancelled} ta bekor qilindi`,
         c.pending && `${c.pending} ta kutmoqda`,
         c.unmatched && `${c.unmatched} ta bog'lanmagan`,
-        report.linked && `${report.linked} ta SKU bog'landi`,
+        linked && `${linked} ta SKU bog'landi`,
       ].filter(Boolean);
       toast.show({ tone: 'ok', message: parts.length ? `Yangilandi: ${parts.join(', ')}` : "Yangilandi. Yangi o'zgarish yo'q." });
     } catch (err) {

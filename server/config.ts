@@ -26,7 +26,7 @@ if (serverless) {
   const missing: string[] = [];
   if (!process.env.APP_PASSWORD) missing.push('APP_PASSWORD (kirish paroli)');
   if (!process.env.SESSION_SECRET) missing.push('SESSION_SECRET (kamida 32 belgili tasodifiy qator)');
-  if (!databaseUrl) missing.push("baza: Extensions → Neon'ni ulang (yoki DATABASE_URL)");
+  if (!databaseUrl) missing.push('DATABASE_URL (Postgres manzili — neon.tech dan bepul)');
   if (missing.length) {
     throw new Error(
       `Netlify'da yetishmayapti: ${missing.join('; ')}. Site configuration → Environment variables'da qo'shing, keyin Deploys → Trigger deploy.`,

@@ -50,7 +50,7 @@ cp .env.example .env
 | `APP_LOGIN`, `APP_PASSWORD` | Kirish uchun login va parol | `sotuvchi` / `ombor2026` |
 | `APP_PORT` | Server porti | `8787` |
 | `DATA_DIR` | Baza fayli va sessiya kaliti papkasi | `data` |
-| `DATABASE_URL` | Postgres manzili. Berilsa — Postgres ishlatiladi (Netlify DB'da `NETLIFY_DATABASE_URL` avtomatik) | — |
+| `DATABASE_URL` | Postgres manzili (masalan, Neon). Berilsa — Postgres ishlatiladi | — |
 | `DB_DRIVER` | Adapterni majburlash: `sqlite` yoki `postgres` | `DATABASE_URL` bo'lsa `postgres`, aks holda `sqlite` |
 | `SECURE_COOKIES` | HTTPS orqali ishlatilsa `1` | `0` |
 | `UZUM_API_KEY` | Uzum Seller API kaliti. Bo'sh bo'lsa — integratsiya o'chiq | — |
@@ -82,17 +82,18 @@ Endi ilova va API bitta serverda: **http://localhost:8787**.
 Netlify'da ilova shunday ishlaydi:
 - **Interfeys** — statik sayt (`web/dist`).
 - **API** — Netlify Function (`netlify/functions/api.mts`), lokal serverdagi xuddi shu kod.
-- **Baza** — Postgres. Netlify'da doimiy disk yo'q, shuning uchun SQLite ishlamaydi; Netlify DB (Neon) yoki istalgan Postgres ishlatiladi.
+- **Baza** — Postgres. Netlify'da doimiy disk yo'q, shuning uchun SQLite ishlamaydi. Bepul variant — [Neon](https://neon.tech); istalgan Postgres ham bo'ladi (`DATABASE_URL`).
 - **Uzum yangilash** — rejali funksiya (`netlify/functions/uzum-sync.mts`) har 5 daqiqada ishga tushadi. Netlify funksiyalari vaqt bilan cheklangan, shuning uchun yangilash bosqichlarga bo'lingan: vaqt tugasa, keyingi safar to'xtagan bosqichdan davom etadi. "Hozir yangilash" tugmasi ham shunday ishlaydi.
 
 #### Bir martalik sozlash
 
 1. **Saytni yarating**: [app.netlify.com](https://app.netlify.com) → **Add new site → Import an existing project → GitHub** → `storage-accountant` repozitoriyasini tanlang. Build sozlamalari `netlify.toml`dan avtomatik olinadi — hech narsani o'zgartirmang.
-2. **Bazani ulang**: sayt sahifasida **Extensions → Neon** (Netlify DB) → bazani yarating. Netlify `NETLIFY_DATABASE_URL`ni o'zi qo'shadi. O'zingizning Postgres'ingiz bo'lsa, uning o'rniga `DATABASE_URL` qo'shing. Jadvallar birinchi so'rovda avtomatik yaratiladi.
+2. **Bazani oching (bepul)**: Netlify'ning o'z bazasi faqat pullik rejalarda, shuning uchun bepul Postgres'ni [neon.tech](https://neon.tech) da oching: **Sign up** → **Create project** (region: Europe, masalan Frankfurt) → **Connect** tugmasi → **Connection pooling** yoqilgan holda ulanish manzilini (`postgresql://...`) nusxalang. Jadvallar birinchi so'rovda avtomatik yaratiladi.
 3. **Sozlamalarni kiriting**: **Site configuration → Environment variables**:
 
 | O'zgaruvchi | Qiymat |
 |---|---|
+| `DATABASE_URL` | Neon'dan nusxalangan ulanish manzili (`postgresql://...`) |
 | `APP_LOGIN` | Kirish logini (masalan, `sotuvchi`) |
 | `APP_PASSWORD` | **Kuchli parol** — sayt internetda ochiq. Kiritilmasa, ilova ishga tushmaydi |
 | `SESSION_SECRET` | Kamida 32 belgili tasodifiy qator (masalan, [1password.com/password-generator](https://1password.com/password-generator) dan) |
@@ -107,7 +108,7 @@ Shundan keyin GitHub'dagi `main` tarmog'iga har bir push saytni avtomatik yangil
 
 #### Tekin rejaga sig'adimi
 
-Ha, odatdagi foydalanishda: funksiya chaqiruvlari (har 5 daqiqada yangilash ≈ 9 000/oy + interfeys so'rovlari) va Neon'ning bepul bazasi bepul limitlar ichida. Netlify o'z limitlarini o'zgartirishi mumkin — **Usage** sahifasida kuzatib boring.
+Ha, odatdagi foydalanishda: funksiya chaqiruvlari (har 5 daqiqada yangilash ≈ 9 000/oy + interfeys so'rovlari) Netlify'ning bepul limiti ichida, baza esa Neon'ning bepul rejasida (0,5 GB — bu ilova uchun yillarga yetadi). Netlify o'z limitlarini o'zgartirishi mumkin — **Usage** sahifasida kuzatib boring.
 
 ### Testlar
 

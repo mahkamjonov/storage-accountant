@@ -8,17 +8,34 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 const DEFAULT_LOGIN = 'sotuvchi';
 const DEFAULT_PASSWORD = 'ombor2026';
 
-/** Netlify Functions (yoki boshqa serverless) — doimiy disk yo'q, sayt internetda ochiq. */
-const serverless = Boolean(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME);
+/**
+ * Netlify Functions (yoki boshqa serverless) — doimiy disk yo'q, sayt internetda ochiq.
+ * Netlify funksiyasi ishlayotganda `NETLIFY` o'zgaruvchisi yo'q (u faqat build paytida bor), shuning uchun
+ * funksiya fayllari `OMBOR_SERVERLESS=1` ni o'zlari o'rnatadi.
+ */
+const serverless = Boolean(
+  process.env.OMBOR_SERVERLESS || process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT,
+);
 
-/** Xato: noto'g'ri sozlangan holda ishga tushmaslik yaxshiroq (masalan, internetda standart parol bilan). */
-function required(name: string, hint: string): never {
-  throw new Error(`${name} sozlanmagan. ${hint}`);
+const dataDir = resolve(process.env.DATA_DIR ?? 'data');
+/** Postgres manzili: o'zingizniki yoki Netlify DB (Neon) avtomatik beradigan. */
+const databaseUrl = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || null;
+
+// Serverless'da noto'g'ri sozlangan holda ishga tushmaymiz — yetishmayotganlarning hammasini bir xabarda aytamiz.
+if (serverless) {
+  const missing: string[] = [];
+  if (!process.env.APP_PASSWORD) missing.push('APP_PASSWORD (kirish paroli)');
+  if (!process.env.SESSION_SECRET) missing.push('SESSION_SECRET (kamida 32 belgili tasodifiy qator)');
+  if (!databaseUrl) missing.push("baza: Extensions → Neon'ni ulang (yoki DATABASE_URL)");
+  if (missing.length) {
+    throw new Error(
+      `Netlify'da yetishmayapti: ${missing.join('; ')}. Site configuration → Environment variables'da qo'shing, keyin Deploys → Trigger deploy.`,
+    );
+  }
 }
 
-function sessionSecret(dataDir: string): string {
+function sessionSecret(): string {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
-  if (serverless) required('SESSION_SECRET', "Netlify → Site configuration → Environment variables bo'limida kamida 32 belgili tasodifiy qiymat qo'shing.");
   // Lokal: birinchi ishga tushishda yaratiladi va saqlanadi — server qayta ishga tushsa ham sessiya saqlanib qoladi.
   const file = resolve(dataDir, '.session-secret');
   if (existsSync(file)) return readFileSync(file, 'utf8').trim();
@@ -28,29 +45,19 @@ function sessionSecret(dataDir: string): string {
   return secret;
 }
 
-function password(): string {
-  if (process.env.APP_PASSWORD) return process.env.APP_PASSWORD;
-  if (serverless) required('APP_PASSWORD', "Sayt internetda ochiq — Netlify'da o'z parolingizni (APP_PASSWORD) kiriting.");
-  return DEFAULT_PASSWORD;
-}
-
-const dataDir = resolve(process.env.DATA_DIR ?? 'data');
-/** Postgres manzili: o'zingizniki yoki Netlify DB (Neon) avtomatik beradigan. */
-const databaseUrl = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || null;
-
 export const config = {
   serverless,
   // PORT emas: ko'p muhitlar (va Vite) PORT'ni o'zlari band qiladi.
   port: Number(process.env.APP_PORT ?? 8787),
   dataDir,
   /** 'sqlite' (lokal, standart) yoki 'postgres' (DATABASE_URL berilsa — avtomatik). */
-  dbDriver: process.env.DB_DRIVER ?? (databaseUrl ? 'postgres' : 'sqlite'),
+  dbDriver: serverless ? 'postgres' : (process.env.DB_DRIVER ?? (databaseUrl ? 'postgres' : 'sqlite')),
   databaseUrl,
   sqlitePath: resolve(process.env.SQLITE_PATH ?? resolve(dataDir, 'ombor.db')),
   login: process.env.APP_LOGIN ?? DEFAULT_LOGIN,
-  password: password(),
+  password: process.env.APP_PASSWORD || DEFAULT_PASSWORD,
   usingDefaultPassword: !process.env.APP_PASSWORD,
-  sessionSecret: sessionSecret(dataDir),
+  sessionSecret: sessionSecret(),
   secureCookies: serverless || process.env.SECURE_COOKIES === '1',
   /** Uzum Seller OpenAPI kaliti (Uzum kabineti → Sozlamalar → API kalitlari). Bo'sh bo'lsa — integratsiya o'chiq. */
   uzumApiKey: process.env.UZUM_API_KEY?.trim() || null,

@@ -2,6 +2,9 @@
 // Rejali funksiya 30 soniya bilan cheklangan — yangilash bosqichma-bosqich: vaqt tugasa, keyingi safar davom etadi.
 import type { Config } from '@netlify/functions';
 
+// Sozlamalar Netlify'da ekanini bilsin (bu yerda NETLIFY o'zgaruvchisi yo'q).
+process.env.OMBOR_SERVERLESS = '1';
+
 export default async (): Promise<void> => {
   const { getContainer } = await import('../../server/container.ts');
   const { uzum } = await getContainer();

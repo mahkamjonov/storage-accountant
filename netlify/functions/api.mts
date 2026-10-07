@@ -1,6 +1,9 @@
 // Netlify Function: butun API (/api/*). Xuddi lokal serverdagi Hono ilovasi — faqat boshqa joyda ishga tushadi.
 import type { Config } from '@netlify/functions';
 
+// Sozlamalar Netlify'da ekanini bilsin (bu yerda NETLIFY o'zgaruvchisi yo'q).
+process.env.OMBOR_SERVERLESS = '1';
+
 type Handler = (req: Request) => Response | Promise<Response>;
 let handler: Promise<Handler> | null = null;
 
@@ -15,10 +18,8 @@ async function load(): Promise<Handler> {
 
 export default async (req: Request): Promise<Response> => {
   try {
-    handler ??= load().catch((err) => {
-      handler = null;
-      throw err;
-    });
+    // Xato ham saqlanadi: sozlamalar faqat qayta deploy bilan o'zgaradi, har so'rovda bir xil tushunarli xabar chiqadi.
+    handler ??= load();
     return await (await handler)(req);
   } catch (err) {
     // Sozlama yetishmasa (masalan, APP_PASSWORD), sababini kirish sahifasida ko'rsatamiz.

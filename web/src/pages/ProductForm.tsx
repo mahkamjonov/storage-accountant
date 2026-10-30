@@ -88,7 +88,7 @@ export function NewProductPage() {
           return { attributes, code: r.code, initialOwn: toInt(r.own), initialUzum: toInt(r.uzum) };
         }),
       });
-      toast.show({ tone: 'ok', message: `"${product.name}" qo'shildi: ${product.variants.length} ta variant` });
+      toast.show({ tone: 'ok', message: `"${product.name}" qo'shildi: ${product.variants.length} ta SKU` });
       if (safeNext) {
         const sep = safeNext.includes('?') ? '&' : '?';
         const target = product.variants.length === 1 ? `variant=${product.variants[0]!.id}` : `kartochka=${product.id}`;
@@ -131,7 +131,7 @@ export function NewProductPage() {
         <section className="form-section">
           <h2 className="form-section__title">Xususiyatlar</h2>
           <p className="field-hint">
-            Rang, o'lcham va boshqalar. Har bir kombinatsiya alohida variant bo'ladi (Qora M, Qora L, Oq M ...). Bitta xil
+            Rang, o'lcham va boshqalar. Har bir kombinatsiya alohida SKU bo'ladi (Qora M, Qora L, Oq M ...). Bitta xil
             mahsulot bo'lsa — bo'sh qoldiring.
           </p>
           {chars.map((c, i) => (
@@ -160,7 +160,7 @@ export function NewProductPage() {
 
         <section className="form-section">
           <h2 className="form-section__title">
-            {matrix.length > 1 ? `Variantlar — ${matrix.length} ta` : 'Artikul va hozirgi qoldiq'}
+            {matrix.length > 1 ? `SKU'lar — ${matrix.length} ta` : 'Artikul va hozirgi qoldiq'}
           </h2>
           <div className="field">
             <label htmlFor={`${ids}-base`} className="field-label">
@@ -176,7 +176,7 @@ export function NewProductPage() {
               onChange={(e) => setBaseCode(e.target.value)}
             />
             <p className="field-hint">
-              Har bir variant artikuli shundan yasaladi: HOODIE-QORA-L. Uzumdagi artikul bilan bir xil bo'lsa, ilova Uzumdagi
+              Har bir SKU artikuli shundan yasaladi: HOODIE-QORA-L. Uzumdagi artikul bilan bir xil bo'lsa, ilova Uzumdagi
               jo'natish va sotuvlarni o'zi taniydi.
             </p>
           </div>
@@ -226,7 +226,7 @@ export function NewProductPage() {
               value={threshold}
               onChange={(e) => setThreshold(digits(e.target.value))}
             />
-            <p className="field-hint">Har bir variant uchun: jami qoldig'i shu songa tushsa, bosh sahifada ko'rinadi.</p>
+            <p className="field-hint">Har bir SKU uchun: jami qoldig'i shu songa tushsa, bosh sahifada ko'rinadi.</p>
           </div>
         </section>
 
@@ -238,7 +238,7 @@ export function NewProductPage() {
 
         <div className="form-bar">
           <button type="submit" className="btn btn--primary btn--lg btn--block" disabled={busy}>
-            {busy ? 'Saqlanmoqda…' : matrix.length > 1 ? `Qo'shish — ${matrix.length} ta variant` : "Qo'shish"}
+            {busy ? 'Saqlanmoqda…' : matrix.length > 1 ? `Qo'shish — ${matrix.length} ta SKU` : "Qo'shish"}
           </button>
         </div>
       </form>
@@ -407,7 +407,7 @@ export function EditProductPage() {
               navigate('/mahsulotlar', { replace: true });
             }}
           >
-            <p>Kartochka va uning barcha variantlari ro'yxatlardan yashiriladi. Tarix saqlanib qoladi, keyin qaytarish mumkin.</p>
+            <p>Kartochka va uning barcha SKU'lari ro'yxatlardan yashiriladi. Tarix saqlanib qoladi, keyin qaytarish mumkin.</p>
           </ConfirmDialog>
         </div>
       ) : null}
@@ -481,7 +481,7 @@ function VariantsEditor({ product }: { product: ProductWithStock }) {
 
   return (
     <section className="form-section">
-      <h2 className="form-section__title">Variantlar — {product.variants.filter((v) => !v.archived).length} ta</h2>
+      <h2 className="form-section__title">SKU'lar — {product.variants.filter((v) => !v.archived).length} ta</h2>
       <ul className="list" role="list">
         {product.variants.map((v) => (
           <VariantEditRow key={v.id} variant={v} />
@@ -492,7 +492,7 @@ function VariantsEditor({ product }: { product: ProductWithStock }) {
       ) : (
         <button type="button" className="btn btn--secondary" onClick={() => setAdding(true)}>
           <Icon name="plus" size={20} />
-          Variant qo'shish
+          SKU qo'shish
         </button>
       )}
     </section>
@@ -512,7 +512,7 @@ function VariantEditRow({ variant: v }: { variant: VariantWithStock }) {
     setError(null);
     try {
       await api.updateVariant(v.id, { code, attributes: attrs });
-      toast.show({ tone: 'ok', message: 'Variant saqlandi' });
+      toast.show({ tone: 'ok', message: 'SKU saqlandi' });
       setEditing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -524,7 +524,7 @@ function VariantEditRow({ variant: v }: { variant: VariantWithStock }) {
   async function toggleArchive() {
     try {
       await api.updateVariant(v.id, { archived: !v.archived });
-      toast.show({ tone: 'ok', message: v.archived ? 'Variant arxivdan chiqarildi' : "Variant arxivga o'tkazildi" });
+      toast.show({ tone: 'ok', message: v.archived ? 'SKU arxivdan chiqarildi' : "SKU arxivga o'tkazildi" });
     } catch (err) {
       toast.show({ tone: 'error', message: err instanceof Error ? err.message : String(err) });
     }
@@ -614,7 +614,7 @@ function AddVariantForm({ product, names, onDone }: { product: ProductWithStock;
     setError(null);
     try {
       await api.addVariant(product.id, { attributes, code, initialOwn: toInt(own), initialUzum: toInt(uzum) });
-      toast.show({ tone: 'ok', message: `"${variantLabel(attributes)}" varianti qo'shildi` });
+      toast.show({ tone: 'ok', message: `"${variantLabel(attributes)}" SKU qo'shildi` });
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -624,7 +624,7 @@ function AddVariantForm({ product, names, onDone }: { product: ProductWithStock;
 
   return (
     <form className="card card--quiet add-variant" onSubmit={save} noValidate>
-      <h3 className="card__title">Yangi variant</h3>
+      <h3 className="card__title">Yangi SKU</h3>
       <div className="field-row field-row--tight">
         {fieldNames.map((n) => (
           <label key={n} className="field">

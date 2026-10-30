@@ -9,8 +9,10 @@ import { matchesVariant } from '../components/ProductPicker.tsx';
 import { Empty, ErrorBox, SearchInput, SkeletonList } from '../components/ui.tsx';
 import { num, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
+import { useShop } from '../shop.tsx';
 
 export function ProductsPage() {
+  const { uzumLinked } = useShop();
   const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -32,10 +34,13 @@ export function ProductsPage() {
       <PageHeader
         title="Mahsulotlar"
         actions={
-          <Link to="/mahsulotlar/yangi" className="btn btn--primary btn--sm">
-            <Icon name="plus" size={20} />
-            Yangi
-          </Link>
+          // Uzum do'konida kartochkalar Uzumdan o'zi keladi — qo'lda qo'shish kerak emas.
+          uzumLinked ? undefined : (
+            <Link to="/mahsulotlar/yangi" className="btn btn--primary btn--sm">
+              <Icon name="plus" size={20} />
+              Yangi
+            </Link>
+          )
         }
       />
 
@@ -46,23 +51,21 @@ export function ProductsPage() {
       ) : state.error ? (
         <ErrorBox error={state.error} onRetry={state.reload} />
       ) : products.length === 0 ? (
-        <Empty
-          title={showArchived ? "Mahsulot yo'q" : "Hali mahsulot yo'q"}
-          action={
-            <div className="empty__actions">
+        uzumLinked ? (
+          <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>
+        ) : (
+          <Empty
+            title={showArchived ? "Mahsulot yo'q" : "Hali mahsulot yo'q"}
+            action={
               <Link to="/mahsulotlar/yangi" className="btn btn--primary">
                 <Icon name="plus" size={20} />
                 Mahsulot qo'shish
               </Link>
-              <Link to="/uzum" className="btn btn--secondary">
-                <Icon name="uzum" size={20} />
-                Uzumdan import
-              </Link>
-            </div>
-          }
-        >
-          Kartochka qo'shing va ichida rang, o'lcham kabi variantlarni yarating — xuddi Uzumdagidek.
-        </Empty>
+            }
+          >
+            Kartochka qo'shing va ichida rang, o'lcham kabi SKU'larni yarating — xuddi Uzumdagidek.
+          </Empty>
+        )
       ) : visible.length === 0 ? (
         <Empty title={`"${query}" topilmadi`}>Boshqacha yozib ko'ring.</Empty>
       ) : (
@@ -139,7 +142,7 @@ function ProductCard({
             className={`icon-btn card-item__toggle${open ? ' is-open' : ''}`}
             onClick={onToggle}
             aria-expanded={open}
-            aria-label={open ? 'Variantlarni yopish' : 'Variantlarni ko\'rsatish'}
+            aria-label={open ? "SKU'larni yopish" : "SKU'larni ko'rsatish"}
           >
             <Icon name="expand" size={20} />
           </button>
@@ -153,7 +156,7 @@ function ProductCard({
             <span className="row__meta">
               {single
                 ? [p.variants[0] && p.variants[0].attributes.length ? variantName(p.variants[0]) : null, p.variants[0]?.code].filter(Boolean).join(' · ') || ' '
-                : `${p.variants.length} ta variant${lowCount ? ` · ${lowCount} tasi tugab qolmoqda` : ''}`}
+                : `${p.variants.length} ta SKU${lowCount ? ` · ${lowCount} tasi tugab qolmoqda` : ''}`}
             </span>
           </span>
           <Numbers {...p.stock} low={p.low} />

@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout.tsx';
 import { Loading } from './components/ui.tsx';
-import { HistoryPage } from './pages/History.tsx';
 import { HomePage } from './pages/Home.tsx';
 import { LoginPage } from './pages/Login.tsx';
 import { EntryPage } from './pages/Entry.tsx';
@@ -36,7 +35,6 @@ export function App() {
         <Route path="mahsulotlar/yangi" element={<NewProductPage />} />
         <Route path="mahsulotlar/:id" element={<ProductDetailPage />} />
         <Route path="mahsulotlar/:id/tahrirlash" element={<EditProductPage />} />
-        <Route path="tarix" element={<HistoryPage />} />
         <Route path="uzum" element={<UzumPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

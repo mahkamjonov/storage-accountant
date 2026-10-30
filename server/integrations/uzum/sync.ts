@@ -72,6 +72,8 @@ export interface SyncReport {
   changes: Record<UzumEventStatus, number>;
   /** To'liq aylana tugadimi (vaqt cheklovi bo'lsa, bir necha chaqiruvda tugaydi). */
   done: boolean;
+  /** Uzumdan avtomatik qo'shilgan SKU'lar soni. */
+  imported: number;
 }
 
 interface Catalog {
@@ -216,7 +218,7 @@ export class UzumSyncService {
     await this.acquireLock(budget);
     this.running = true;
     const startedAt = this.now().toISOString();
-    const report: SyncReport = { startedAt, finishedAt: startedAt, catalogSkus: 0, linked: 0, documents: 0, changes: emptyCounts(), done: false };
+    const report: SyncReport = { startedAt, finishedAt: startedAt, catalogSkus: 0, linked: 0, documents: 0, changes: emptyCounts(), done: false, imported: 0 };
     try {
       let stage = Number((await this.repo.getSetting(KEY.stage)) ?? 0) || 0;
       if (stage >= STAGES.length) stage = 0;
@@ -318,7 +320,13 @@ export class UzumSyncService {
         }
         await this.repo.transaction((tx) => tx.replaceUzumSkus(skus));
         report.catalogSkus = skus.length;
-        report.linked += await this.autoLink(skus, buildCatalog(skus, await this.repo.listShops()));
+        const catalog = buildCatalog(skus, await this.repo.listShops());
+        report.linked += await this.autoLink(skus, catalog);
+        // Uzumdagi kartochkalar ilovaga o'zi qo'shiladi (yangi do'kon ulanganda ham, Uzumda yangi SKU paydo bo'lganda ham).
+        for (const shop of catalog.shops.values()) {
+          const r = await this.importFromUzum(shop);
+          report.imported += r.variants;
+        }
         return;
       }
 
@@ -658,28 +666,8 @@ export class UzumSyncService {
     return skus.map((s) => ({ ...s, variantId: bySku.get(s.skuId) ?? null }));
   }
 
-  /** Uzum SKU'sini ilovadagi variantga qo'lda bog'laydi (yoki bog'lanishni uzadi). Faqat bir do'kon ichida. */
-  async link(uzumSkuId: number, variantId: string | null): Promise<void> {
-    await this.repo.transaction(async (tx) => {
-      const sku = (await tx.listUzumSkus()).find((s) => s.skuId === uzumSkuId);
-      const current = await tx.findVariantByUzumSku(uzumSkuId);
-      if (current && current.id !== variantId) await tx.updateVariant(current.id, { uzumSkuId: null });
-      if (variantId) {
-        const v = await tx.getVariant(variantId);
-        if (!v) throw new AppError(404, 'VARIANT_NOT_FOUND', 'Variant topilmadi.');
-        const product = await tx.getProduct(v.productId);
-        const shop = product ? await tx.getShop(product.shopId) : null;
-        if (sku && shop?.uzumShopId !== sku.shopId) {
-          throw new AppError(409, 'OTHER_SHOP', "Bu mahsulot boshqa do'konga tegishli. Uzum mahsulotini faqat o'sha do'kondagi variantga bog'lash mumkin.");
-        }
-        await tx.updateVariant(variantId, { uzumSkuId });
-      }
-    });
-    await this.reprocessStored(['unmatched', 'pending']);
-  }
-
   /**
-   * Joriy do'konning bog'lanmagan Uzum kartochkalarini ilovaga import qiladi: kartochka, variantlar (xususiyat va kod bilan)
+   * Do'konning ilovada yo'q Uzum SKU'larini qo'shadi (yangilash vaqtida avtomatik chaqiriladi): kartochka, variantlar (xususiyat va kod bilan)
    * va Uzumdagi hozirgi qoldiq. Bu SKU'larning import paytigacha bo'lgan hodisalari shu qoldiqqa kirgan — ular qayta yozilmaydi.
    */
   async importFromUzum(shop: Shop, uzumProductIds?: number[]): Promise<{ products: number; variants: number }> {
@@ -709,16 +697,22 @@ export class UzumSyncService {
         }
         if (fresh.length === 0) return;
 
-        const product = await tx.createProduct({
-          shopId: shop.id,
-          name: fresh[0]!.sku.productTitle || fresh[0]!.sku.skuTitle,
-          lowStockThreshold: 10,
-          uzumProductId,
-        });
-        const seen = new Set<string>();
+        // Uzumdagi bu kartochka ilovada bor bo'lsa (masalan, Uzumda yangi rang qo'shilgan) — o'shanga qo'shamiz.
+        const existing = (await tx.listProducts({ shopId: shop.id, includeArchived: true })).find((p) => p.uzumProductId === uzumProductId);
+        const product =
+          existing ??
+          (await tx.createProduct({
+            shopId: shop.id,
+            name: fresh[0]!.sku.productTitle || fresh[0]!.sku.skuTitle,
+            lowStockThreshold: 10,
+            uzumProductId,
+          }));
+        const seen = new Set<string>(
+          existing ? (await tx.listVariants({ productId: existing.id, includeArchived: true })).map((v) => variantLabel(v.attributes).toLowerCase()) : [],
+        );
         for (const { sku, code } of fresh) {
           let attributes = parseCharacteristics(sku.characteristics);
-          if (seen.has(variantLabel(attributes).toLowerCase())) attributes = [{ name: 'Variant', value: sku.skuTitle }];
+          if (seen.has(variantLabel(attributes).toLowerCase())) attributes = [{ name: 'SKU', value: sku.skuTitle }];
           seen.add(variantLabel(attributes).toLowerCase());
           const variant = await tx.createVariant({ productId: product.id, code, attributes, uzumSkuId: sku.skuId });
           if (sku.quantityActive > 0) {
@@ -738,7 +732,7 @@ export class UzumSyncService {
           importedSkuIds.push(sku.skuId);
           result.variants += 1;
         }
-        result.products += 1;
+        if (!existing) result.products += 1;
       });
     }
 

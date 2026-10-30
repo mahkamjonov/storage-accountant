@@ -5,7 +5,6 @@ import { Icon, type IconName } from './Icon.tsx';
 const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Bosh sahifa', icon: 'home', end: true },
   { to: '/mahsulotlar', label: 'Mahsulotlar', icon: 'box' },
-  { to: '/tarix', label: 'Tarix', icon: 'clock' },
   { to: '/uzum', label: 'Uzum', icon: 'uzum' },
 ];
 

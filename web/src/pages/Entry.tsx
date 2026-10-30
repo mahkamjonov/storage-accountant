@@ -26,6 +26,7 @@ import { Empty, ErrorBox, SearchInput, SkeletonList } from '../components/ui.tsx
 import { num, signed, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
 import { entryPath, typeFromSlug } from '../movementUi.ts';
+import { useShop } from '../shop.tsx';
 
 export function EntryPage() {
   const { slug } = useParams();
@@ -118,6 +119,7 @@ function CardPicker({
   onPick: (p: ProductWithStock, focusVariant?: string) => void;
   createNext: string;
 }) {
+  const { uzumLinked } = useShop();
   const [query, setQuery] = useState('');
   const sorted = useMemo(
     () => products.filter((p) => p.variants.some((v) => !v.archived)).sort((a, b) => recent(a.lastMovementAt, b.lastMovementAt) || a.name.localeCompare(b.name)),
@@ -127,23 +129,18 @@ function CardPicker({
   const createHref = `/mahsulotlar/yangi?keyin=${encodeURIComponent(createNext)}${query ? `&nom=${encodeURIComponent(query)}` : ''}`;
 
   if (sorted.length === 0) {
+    if (uzumLinked) return <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>;
     return (
       <Empty
         title="Hali mahsulot yo'q"
         action={
-          <div className="empty__actions">
-            <Link to={createHref} className="btn btn--primary">
-              <Icon name="plus" size={20} />
-              Mahsulot qo'shish
-            </Link>
-            <Link to="/uzum" className="btn btn--secondary">
-              <Icon name="uzum" size={20} />
-              Uzumdan import
-            </Link>
-          </div>
+          <Link to={createHref} className="btn btn--primary">
+            <Icon name="plus" size={20} />
+            Mahsulot qo'shish
+          </Link>
         }
       >
-        Avval mahsulot qo'shing yoki Uzumdan import qiling.
+        Avval mahsulot qo'shing.
       </Empty>
     );
   }
@@ -179,7 +176,7 @@ function CardPicker({
                       {exact
                         ? `${variantName(exact)} · ${exact.code}`
                         : active.length > 1
-                          ? `${active.length} ta variant`
+                          ? `${active.length} ta SKU`
                           : [active[0]?.attributes.length ? variantName(active[0]) : null, active[0]?.code].filter(Boolean).join(' · ') || ' '}
                     </span>
                   </span>
@@ -276,7 +273,7 @@ function BatchForm({
         .map(({ v }) => (type === 'adjustment' ? { variantId: v.id, counted: Number(values[v.id]) } : { variantId: v.id, quantity: Number(values[v.id]) }));
       const result = await api.recordBatch({ type, location: place, items, date, note: note.trim() || undefined });
       const ids = result.movements.map((m) => m.id);
-      const what = type === 'received' ? `${total} ta keldi` : type === 'adjustment' ? `${ids.length} ta variant tuzatildi` : `${total} ta yozildi`;
+      const what = type === 'received' ? `${total} ta keldi` : type === 'adjustment' ? `${ids.length} ta SKU tuzatildi` : `${total} ta yozildi`;
       toast.show({
         tone: 'ok',
         message: `${product.name}: ${what}`,
@@ -301,7 +298,7 @@ function BatchForm({
         <button type="button" className="picked" onClick={onChangeProduct}>
           <span className="picked__text">
             <span className="picked__name">{product.name}</span>
-            <span className="picked__variant">{variants.length > 1 ? `${variants.length} ta variant` : variants[0]?.code ?? ''}</span>
+            <span className="picked__variant">{variants.length > 1 ? `${variants.length} ta SKU` : variants[0]?.code ?? ''}</span>
           </span>
           <span className="picked__change">O'zgartirish</span>
         </button>
@@ -423,8 +420,8 @@ function BatchForm({
                 ? 'Sanagan sonni kiriting'
                 : 'Sonni kiriting'
               : type === 'adjustment'
-                ? `Saqlash — ${filled} ta variant`
-                : `Saqlash — ${num(total)} ta${filled > 1 ? ` (${filled} variant)` : ''}`}
+                ? `Saqlash — ${filled} ta SKU`
+                : `Saqlash — ${num(total)} ta${filled > 1 ? ` (${filled} SKU)` : ''}`}
         </button>
       </div>
     </form>

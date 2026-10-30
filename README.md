@@ -5,9 +5,9 @@ Uzum Market sotuvchisi uchun ombor hisobi. Har bir harakat alohida yozuv bo'lib 
 - **Sotuvchi faqat "Mahsulot keldi"ni kiritadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Kerak bo'lsa — "Sanab tuzatish" va "Brak".
 - **Qolganini Uzum o'zi beradi**: Uzumga jo'natish (nakladnoy), sotuvlar (FBO — Uzum omboridan, **FBS — omborimdan**) va qaytarishlar avtomatik yoziladi.
 - **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon yuqoridagi tanlagichdan almashtiriladi (Uzum seller'dagi kabi).
-- **Mahsulot = kartochka, ichida variantlar (SKU)** — xuddi Uzumdagidek: "Hoodie" kartochkasi, ichida Qora M, Qora L, Oq M ... Har bir variantning o'z kodi va o'z qoldig'i bor.
+- **Mahsulot = kartochka, ichida SKU'lar** — xuddi Uzumdagidek: "Hoodie" kartochkasi, ichida Qora M, Qora L, Oq M ... Har bir SKU'ning o'z kodi va o'z qoldig'i bor.
 - Telefon uchun qilingan, kompyuterda ham qulay. PWA sifatida telefonga o'rnatsa bo'ladi.
-- Yozuvlar o'chirilmaydi. Xato bo'lsa, yozuv **bekor qilinadi**: qoldiqqa ta'sir qilmaydi, lekin tarixda ko'rinib turadi.
+- Yozuvlar o'chirilmaydi. Xato bo'lsa, yozuv **bekor qilinadi**: qoldiqqa ta'sir qilmaydi, lekin mahsulot sahifasidagi harakatlar ro'yxatida ko'rinib turadi.
 - Qoldiq manfiy bo'lolmaydi: ko'p kiritilsa yoki bekor qilish qoldiqni manfiy qilsa, ilova sababini tushuntirib, to'xtatadi.
 
 ## Lokal ishga tushirish
@@ -100,11 +100,11 @@ Netlify'da ilova shunday ishlaydi:
 | `UZUM_API_KEY` | Uzum Seller API kaliti |
 
 4. **Qayta joylang**: **Deploys → Trigger deploy → Deploy site**. Tayyor: `https://<sayt-nomi>.netlify.app`.
-5. Saytga kiring → **Uzum** → do'konni tanlang → **Hammasini import qilish** → keyin omborimdagi sonlarni **Sanab tuzatish** bilan kiriting.
+5. Saytga kiring → **Uzum** → **Hozir yangilash**. Kartochkalar SKU'lari bilan o'zi qo'shiladi → keyin omborimdagi sonlarni **Sanab tuzatish** bilan kiriting.
 
 Shundan keyin GitHub'dagi `main` tarmog'iga har bir push saytni avtomatik yangilaydi.
 
-> Kompyuterdagi lokal ma'lumotlar (SQLite) Netlify'ga ko'chmaydi — Netlify'da baza bo'sh boshlanadi. Mahsulotlar Uzumdan import qilinadi.
+> Kompyuterdagi lokal ma'lumotlar (SQLite) Netlify'ga ko'chmaydi — Netlify'da baza bo'sh boshlanadi. Mahsulotlar Uzumdan o'zi qo'shiladi.
 
 #### Tekin rejaga sig'adimi
 
@@ -118,7 +118,7 @@ npm test
 
 - `domain/stock.test.ts` — qoldiq hisoblash logikasi (sof funksiyalar), qabul mezonidagi stsenariy ham shu yerda.
 - `server/services/inventory.test.ts` — biznes oqimlari. **Bir xil testlar har bir saqlash adapteri uchun** (xotira, SQLite va Postgres) ishga tushadi. Postgres testlari PGlite bilan — tashqi server kerak emas.
-- `server/integrations/uzum/sync.test.ts` — Uzum sinxronlash soxta Uzum API bilan: nakladnoy → omborimdan ayirish, takrorlanmaslik, bekor qilish, son o'zgarishi, kutilayotgan yozuv, bog'lash, import.
+- `server/integrations/uzum/sync.test.ts` — Uzum sinxronlash soxta Uzum API bilan: nakladnoy → omborimdan ayirish, takrorlanmaslik, bekor qilish, son o'zgarishi, kutilayotgan yozuv, avtomatik import.
 - `server/http/app.test.ts` — API: kirish, himoya, xato javoblari.
 
 ## Tuzilma
@@ -199,7 +199,7 @@ npm.cmd run uzum:tekshir
 ```
 
 4. Serverni qayta ishga tushiring. Ilova ishga tushganda va har 15 daqiqada Uzumdan yangilaydi. "Uzum" sahifasidagi **Hozir yangilash** tugmasi bilan qo'lda ham yangilash mumkin.
-5. Har bir Uzum do'koni ilovada alohida do'kon bo'lib paydo bo'ladi. Do'konni tanlang → "Uzum" → **Hammasini import qilish**: kartochkalar rang, o'lcham va kodlari hamda Uzumdagi qoldig'i bilan keladi. Keyin omborimdagi sonlarni "Sanab tuzatish" bilan kiriting.
+5. Har bir Uzum do'koni ilovada alohida do'kon bo'lib paydo bo'ladi, kartochkalari esa rang, o'lcham, kodlari va Uzumdagi qoldig'i bilan **o'zi qo'shiladi** — hech narsa bosish shart emas. Keyin omborimdagi sonlarni "Sanab tuzatish" bilan kiriting.
 
 ### Do'konlar
 
@@ -219,17 +219,13 @@ npm.cmd run uzum:tekshir
 | FBS/DBS buyurtma yaratildi | **Sotildi (FBS)**: **omborim −** (tovarni o'zingiz jo'natasiz) | `GET /v2/fbs/orders` (har bir holat bo'yicha) |
 | FBS buyurtma bekor qilindi yoki qaytarildi | Yozuv bekor qilinadi — tovar omborga qaytadi | o'sha |
 | Qaytarish nakladnoyi yakunlandi (tovar sizga topshirildi) | **Qaytdi**: omborim +, Uzum − | `GET /v1/return` |
-| Katalog: SKU, artikul, Uzumdagi qoldiq | Bog'lash, import va "Uzum bilan farq" | `GET /v1/product/shop/{shopId}` |
+| Katalog: SKU, artikul, Uzumdagi qoldiq | Avtomatik import va "Uzum bilan farq" | `GET /v1/product/shop/{shopId}` |
 
-Uzumdagi har bir hujjat qatori takrorlanmas kalit bilan saqlanadi, shuning uchun qayta yangilashda ikki marta yozilmaydi. Sotuv kaliti "buyurtma + SKU kodi": FBS buyurtma sotuvlar ro'yxatida ham ko'rinsa, bir marta — omborimdan — hisoblanadi. Avtomatik yozuvlar tarixda **Uzum** belgisi va hujjat raqami bilan ko'rinadi.
+Uzumdagi har bir hujjat qatori takrorlanmas kalit bilan saqlanadi, shuning uchun qayta yangilashda ikki marta yozilmaydi. Sotuv kaliti "buyurtma + SKU kodi": FBS buyurtma sotuvlar ro'yxatida ham ko'rinsa, bir marta — omborimdan — hisoblanadi. Avtomatik yozuvlar mahsulot sahifasida **Uzum** belgisi va hujjat raqami bilan ko'rinadi.
 
 ### Qanday taniydi
 
-Ilovadagi variant artikuli Uzumdagi SKU artikuli (yoki sotuvchi kodi, yoki SKU nomi) bilan bir xil bo'lsa, ular avtomatik bog'lanadi. Katta-kichik harf farq qilmaydi. Mos kelmaganlar "Uzum" sahifasidagi **Bog'lanmagan Uzum mahsulotlari** ro'yxatida chiqadi:
-- **Bog'lash** — ilovadagi mavjud variantni tanlaysiz;
-- **Import qilish** — Uzum kartochkasi ilovaga variantlari, artikullari va Uzumdagi hozirgi qoldig'i bilan qo'shiladi. Omborimdagi sonni keyin "Sanab tuzatish" bilan kiritasiz.
-
-Bog'langach, shu SKU'ni kutib turgan yozuvlar o'zi qo'llanadi.
+Har yangilashda Uzum katalogi tekshiriladi: ilovadagi SKU artikuli Uzumdagi SKU artikuli (yoki sotuvchi kodi) bilan bir xil bo'lsa, ular bog'lanadi (katta-kichik harf farq qilmaydi). Ilovada yo'q SKU'lar **o'zi qo'shiladi** — yangi kartochka ochiladi yoki Uzumda o'sha kartochkaga yangi rang/o'lcham qo'shilgan bo'lsa, mavjud kartochkaga qo'shiladi. Qo'lda bog'lash yoki import qilish kerak emas. Yangi SKU'ni kutib turgan yozuvlar o'zi qo'llanadi.
 
 ### Qoldiq qoidalari saqlanadi
 
@@ -241,7 +237,7 @@ Birinchi ulanishda shu kundan boshlab hisoblanadi. Eski hujjatlar boshlang'ich q
 
 ### "Uzumda" soni Uzumnikidan farq qilsa
 
-Mahsulot sahifasida variant yonida "Uzum: N ta — tuzatish" chiqadi. Bosilsa, Uzumdagi son "Sanab tuzatish" yozuvi sifatida olinadi va tarixda ko'rinadi. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
+Mahsulot sahifasida SKU yonida "Uzum: N ta — tuzatish" chiqadi. Bosilsa, Uzumdagi son "Sanab tuzatish" yozuvi sifatida olinadi va tarixda ko'rinadi. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
 
 ### Haqiqiy Uzum ma'lumotlari bilan tekshirilgan
 

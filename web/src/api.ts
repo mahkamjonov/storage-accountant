@@ -9,7 +9,6 @@ import type {
   Stock,
   UzumEvent,
   UzumEventStatus,
-  UzumSku,
   UzumStatus,
   VariantWithStock,
 } from '../../domain/index.ts';
@@ -132,9 +131,9 @@ export interface SyncReport {
   changes: Record<UzumEventStatus, number>;
   /** To'liq aylana tugadimi (aks holda — yana chaqirish kerak). */
   done: boolean;
+  /** Uzumdan avtomatik qo'shilgan SKU'lar. */
+  imported: number;
 }
-
-export type CatalogSku = UzumSku & { variantId: string | null };
 
 /** Uzum holati joriy do'kon uchun: shopLinked — bu do'kon Uzumdagi do'kon bilan bog'langanmi. */
 export type UzumShopStatus = UzumStatus & { shopLinked: boolean };
@@ -185,8 +184,4 @@ export const api = {
       'GET',
       `/uzum/events?${new URLSearchParams({ ...(statuses ? { status: statuses.join(',') } : {}), ...(limit ? { limit: String(limit) } : {}) })}`,
     ),
-  uzumCatalog: () => request<{ skus: CatalogSku[] }>('GET', '/uzum/catalog'),
-  uzumLink: (uzumSkuId: number, variantId: string | null) => request<{ ok: true }>('POST', '/uzum/link', { uzumSkuId, variantId }),
-  uzumImport: (uzumProductIds?: number[]) =>
-    request<{ products: number; variants: number }>('POST', '/uzum/import', { uzumProductIds }),
 };

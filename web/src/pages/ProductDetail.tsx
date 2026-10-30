@@ -12,12 +12,13 @@ import { useAsync } from '../hooks.ts';
 import { entryPath, EXTRA_TYPES, MAIN_TYPE, MANUAL_UZUM_TYPES } from '../movementUi.ts';
 import { useShop } from '../shop.tsx';
 
-const HISTORY_LIMIT = 100;
+const HISTORY_PAGE = 50;
 
 export function ProductDetailPage() {
   const { id = '' } = useParams();
   const product = useAsync(() => api.product(id), [id]);
-  const history = useAsync(() => api.movements({ productId: id, limit: HISTORY_LIMIT }), [id]);
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
+  const history = useAsync(() => api.movements({ productId: id, limit: historyLimit }), [id, historyLimit]);
   const [reconcile, setReconcile] = useState<VariantWithStock | null>(null);
   const toast = useToast();
   const { uzumLinked } = useShop();
@@ -55,7 +56,7 @@ export function ProductDetailPage() {
         subtitle={
           single
             ? [single.attributes.length ? variantName(single) : null, single.code].filter(Boolean).join(' · ') || undefined
-            : `${active.length} ta variant`
+            : `${active.length} ta SKU`
         }
         back="/mahsulotlar"
         actions={
@@ -94,7 +95,7 @@ export function ProductDetailPage() {
           {!single || p.variants.length > 1 ? (
             <section aria-labelledby="variants-title">
               <h2 id="variants-title" className="section-title">
-                Variantlar
+                SKU'lar
               </h2>
               <ul className="list" role="list">
                 {p.variants.map((v) => (
@@ -121,9 +122,14 @@ export function ProductDetailPage() {
               <>
                 <MovementList movements={history.data!.movements} lookup={lookup} show={p.variants.length > 1 ? 'variant' : 'none'} />
                 {history.data!.hasMore && (
-                  <Link to={`/tarix?mahsulot=${p.id}`} className="btn btn--secondary btn--block">
-                    To'liq tarixni ko'rish
-                  </Link>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--block"
+                    disabled={history.loading}
+                    onClick={() => setHistoryLimit((n) => n + HISTORY_PAGE)}
+                  >
+                    {history.loading ? 'Yuklanmoqda…' : "Yana ko'rsatish"}
+                  </button>
                 )}
               </>
             )}

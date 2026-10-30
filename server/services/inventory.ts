@@ -347,7 +347,7 @@ export class InventoryService {
 
   private parseVariantInputs(value: unknown) {
     const list = Array.isArray(value) && value.length > 0 ? value : [{}];
-    if (list.length > MAX_VARIANTS) throw bad('TOO_MANY_VARIANTS', `Bitta kartochkada ${MAX_VARIANTS} tadan ko'p variant bo'lmasin.`);
+    if (list.length > MAX_VARIANTS) throw bad('TOO_MANY_VARIANTS', `Bitta kartochkada ${MAX_VARIANTS} tadan ko'p SKU bo'lmasin.`);
     const parsed = list.map((raw) => {
       const v = (raw ?? {}) as VariantInput;
       return {
@@ -362,12 +362,12 @@ export class InventoryService {
     for (const v of parsed) {
       const norm = normalizeCode(v.code);
       if (norm) {
-        if (codes.has(norm)) throw bad('DUPLICATE_CODE', `"${v.code}" artikuli ikki variantda takrorlangan. Har biriga alohida artikul yozing.`);
+        if (codes.has(norm)) throw bad('DUPLICATE_CODE', `"${v.code}" artikuli ikki SKU'da takrorlangan. Har biriga alohida artikul yozing.`);
         codes.add(norm);
       }
       const key = attributesKey(v.attributes);
       if (combos.has(key)) {
-        throw bad('DUPLICATE_VARIANT', `"${variantLabel(v.attributes) || 'Asosiy'}" varianti ikki marta yozilgan.`);
+        throw bad('DUPLICATE_VARIANT', `"${variantLabel(v.attributes) || 'Asosiy'}" SKU ikki marta yozilgan.`);
       }
       combos.add(key);
     }
@@ -417,7 +417,7 @@ export class InventoryService {
       await this.assertCodeFree(tx, product.shopId, v!.code);
       const existing = await tx.listVariants({ productId, includeArchived: true });
       if (existing.some((e) => attributesKey(e.attributes) === attributesKey(v!.attributes))) {
-        throw new AppError(409, 'DUPLICATE_VARIANT', `"${variantLabel(v!.attributes) || 'Asosiy'}" varianti bu kartochkada allaqachon bor.`);
+        throw new AppError(409, 'DUPLICATE_VARIANT', `"${variantLabel(v!.attributes) || 'Asosiy'}" SKU bu kartochkada allaqachon bor.`);
       }
       const variant = await tx.createVariant({ productId, code: v!.code, attributes: v!.attributes });
       await this.insertInitialStock(tx, variant.id, v!.initialOwn, v!.initialUzum);
@@ -428,7 +428,7 @@ export class InventoryService {
   async updateVariant(id: string, input: { code?: unknown; attributes?: unknown; archived?: unknown }): Promise<ProductWithStock> {
     const productId = await this.repo.transaction(async (tx) => {
       const variant = await tx.getVariant(id);
-      if (!variant) throw new AppError(404, 'VARIANT_NOT_FOUND', 'Variant topilmadi.');
+      if (!variant) throw new AppError(404, 'VARIANT_NOT_FOUND', 'SKU topilmadi.');
       const patch: Parameters<Repository['updateVariant']>[1] = {};
       if (input.code !== undefined) {
         patch.code = optionalText(input.code, MAX_TEXT, 'Artikul');
@@ -439,7 +439,7 @@ export class InventoryService {
         patch.attributes = parseAttributes(input.attributes);
         const siblings = await tx.listVariants({ productId: variant.productId, includeArchived: true });
         if (siblings.some((s) => s.id !== id && attributesKey(s.attributes) === attributesKey(patch.attributes!))) {
-          throw new AppError(409, 'DUPLICATE_VARIANT', 'Bunday variant bu kartochkada allaqachon bor.');
+          throw new AppError(409, 'DUPLICATE_VARIANT', 'Bunday SKU bu kartochkada allaqachon bor.');
         }
       }
       if (input.archived !== undefined) patch.archived = input.archived === true;

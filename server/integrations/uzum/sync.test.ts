@@ -220,16 +220,17 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     expect(await uzum.listEvents(shop, ['pending'])).toHaveLength(0);
   });
 
-  it('artikuli mos kelmagan SKU bog\'lanmagan bo\'lib turadi; qo\'lda bog\'langach yoziladi', async () => {
-    const { uzum, fake, stock, qora, shop } = await setup();
-    fake.cards = [card(500, 'Hoodie', [{ skuId: 11, code: 'BOSHQA-KOD' }])];
-    fake.invoices = [invoice(1, [{ skuId: 11, qty: 30 }])];
-    const r = await uzum.sync();
-    expect(r.changes.unmatched).toBe(1);
-    expect((await stock())['HOODIE-QORA']!.own).toBe(100);
-
-    await uzum.link(11, qora.id);
-    expect((await stock())['HOODIE-QORA']!.own).toBe(70);
+  it("ilovada yo'q Uzum SKU'si avtomatik qo'shiladi va uning hujjatlari yoziladi", async () => {
+    const { uzum, fake, inventory, shop } = await setup();
+    // Uzumda yangi kartochka paydo bo'ldi, ilovada esa yo'q
+    fake.cards.push(card(700, 'Kepka', [{ skuId: 31, code: 'KEPKA-QORA', chars: 'Qora', qty: 5 }]));
+    await uzum.sync(); // birinchi yangilash: import (Uzumda 5 ta)
+    fake.invoices = [invoice(2, [{ skuId: 31, qty: 3 }])];
+    const kepka = (await inventory.listProducts(shop.id)).find((p) => p.uzumProductId === 700)!;
+    await inventory.recordMovement({ variantId: kepka.variants[0]!.id, type: 'received', quantity: 10 });
+    await uzum.sync(); // nakladnoy: omborimdan 3 ta Uzumga
+    const after = await inventory.getProduct(kepka.id);
+    expect(after.stock).toEqual({ own: 7, uzum: 8, total: 15 });
     expect(await uzum.listEvents(shop, ['unmatched'])).toHaveLength(0);
   });
 
@@ -261,17 +262,16 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     expect((await stock())['HOODIE-QORA']!.own).toBe(100);
   });
 
-  it('Uzum katalogidan import: kartochka, variantlar va Uzumdagi qoldiq', async () => {
+  it("do'kon ulanganda Uzum katalogi o'zi import qilinadi: kartochka, SKU'lar va Uzumdagi qoldiq", async () => {
     const { uzum, fake, inventory, shop } = await setup();
     fake.cards.push(
-      card(600, "Erkaklar sport kostyumi", [
+      card(600, 'Erkaklar sport kostyumi', [
         { skuId: 21, code: 'DINAMUZ-JORDAN-БЕЖЕВ-L', chars: 'Цвет: Бежевый, Размер одежды: L', qty: 8 },
         { skuId: 22, code: 'DINAMUZ-JORDAN-БЕЖЕВ-M', chars: 'Цвет: Бежевый, Размер одежды: M', qty: 0 },
       ]),
     );
-    await uzum.sync();
-    const result = await uzum.importFromUzum(shop);
-    expect(result).toEqual({ products: 1, variants: 2 });
+    const report = await uzum.sync();
+    expect(report.imported).toBe(2);
 
     const imported = (await inventory.listProducts(shop.id)).find((p) => p.uzumProductId === 600)!;
     expect(imported.name).toBe('Erkaklar sport kostyumi');
@@ -279,8 +279,14 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
       ['DINAMUZ-JORDAN-БЕЖЕВ-L', 'Бежевый/L', 8, 21],
       ['DINAMUZ-JORDAN-БЕЖЕВ-M', 'Бежевый/M', 0, 22],
     ]);
-    // Ikkinchi import hech narsa qo'shmaydi.
-    expect(await uzum.importFromUzum(shop)).toEqual({ products: 0, variants: 0 });
+
+    // Uzumda shu kartochkaga yangi o'lcham qo'shildi — o'sha kartochkaga qo'shiladi, ikkinchi nusxa ochilmaydi
+    fake.cards[1]!.skuList!.push({ skuId: 23, skuTitle: 'DINAMUZ-JORDAN-БЕЖЕВ-XL', sellerItemCode: 'DINAMUZ-JORDAN-БЕЖЕВ-XL', characteristics: 'Цвет: Бежевый, Размер одежды: XL', quantityActive: 4 });
+    const again = await uzum.sync();
+    expect(again.imported).toBe(1);
+    const cards = (await inventory.listProducts(shop.id)).filter((p) => p.uzumProductId === 600);
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.variants.map((v) => v.code)).toContain('DINAMUZ-JORDAN-БЕЖЕВ-XL');
   });
 
   it("FBS buyurtma omborimdan ayiriladi; bekor qilinsa qaytadi; sotuvlar ro'yxatida takrorlanmaydi", async () => {

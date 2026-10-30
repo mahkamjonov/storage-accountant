@@ -230,22 +230,6 @@ export function createApp(deps: AppDeps) {
     return c.json({ events: await uzum.listEvents(c.get('shop'), statuses.length ? statuses : undefined, limit) });
   });
 
-  app.get('/uzum/catalog', async (c) => c.json({ skus: await uzum.catalog(c.get('shop')) }));
-
-  app.post('/uzum/link', async (c) => {
-    const body = await readJson(c);
-    if (typeof body.uzumSkuId !== 'number') throw new AppError(400, 'INVALID_INPUT', "Uzum mahsuloti tanlanmagan.");
-    const variantId = typeof body.variantId === 'string' && body.variantId ? body.variantId : null;
-    await uzum.link(body.uzumSkuId, variantId);
-    return c.json({ ok: true });
-  });
-
-  app.post('/uzum/import', async (c) => {
-    const body = await readJson(c);
-    const ids = Array.isArray(body.uzumProductIds) ? body.uzumProductIds.filter((n): n is number => typeof n === 'number') : undefined;
-    return c.json(await uzum.importFromUzum(c.get('shop'), ids));
-  });
-
   app.notFound((c) => c.json({ error: { code: 'NOT_FOUND', message: 'Topilmadi.' } }, 404));
 
   return app;

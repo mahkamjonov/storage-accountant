@@ -58,15 +58,19 @@ export function HomePage() {
 
         <div className="home-grid__low">
           {data && data.productCount === 0 ? (
-            <Empty
-              title="Hali mahsulot yo'q"
-              action={
-                <Link to={uzumLinked ? '/uzum' : '/mahsulotlar/yangi'} className="btn btn--primary">
-                  <Icon name={uzumLinked ? 'uzum' : 'plus'} size={20} />
-                  {uzumLinked ? 'Uzumdan import qilish' : "Mahsulot qo'shish"}
-                </Link>
-              }
-            />
+            uzumLinked ? (
+              <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>
+            ) : (
+              <Empty
+                title="Hali mahsulot yo'q"
+                action={
+                  <Link to="/mahsulotlar/yangi" className="btn btn--primary">
+                    <Icon name="plus" size={20} />
+                    Mahsulot qo'shish
+                  </Link>
+                }
+              />
+            )
           ) : (
             data &&
             data.low.length > 0 && (
@@ -110,7 +114,7 @@ function UzumToday({ today }: { today: Overview['uzumToday'] }) {
   ].filter((i) => i.value > 0);
   if (items.length === 0) return null;
   return (
-    <Link to="/tarix" className="card uzum-today">
+    <Link to="/uzum" className="card uzum-today">
       <span className="uzum-today__title">Bugun Uzumdan</span>
       <span className="uzum-today__list">
         {items.map((i) => (

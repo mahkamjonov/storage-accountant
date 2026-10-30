@@ -83,7 +83,7 @@ Netlify'da ilova shunday ishlaydi:
 - **Interfeys** — statik sayt (`web/dist`).
 - **API** — Netlify Function (`netlify/functions/api.mts`), lokal serverdagi xuddi shu kod.
 - **Baza** — Postgres. Netlify'da doimiy disk yo'q, shuning uchun SQLite ishlamaydi. Bepul variant — [Neon](https://neon.tech); istalgan Postgres ham bo'ladi (`DATABASE_URL`).
-- **Uzum yangilash** — rejali funksiya (`netlify/functions/uzum-sync.mts`) har 5 daqiqada ishga tushadi. Netlify funksiyalari vaqt bilan cheklangan, shuning uchun yangilash bosqichlarga bo'lingan: vaqt tugasa, keyingi safar to'xtagan bosqichdan davom etadi. "Hozir yangilash" tugmasi ham shunday ishlaydi.
+- **Uzum yangilash** — rejali funksiya (`netlify/functions/uzum-sync.mts`) har 20 daqiqada ishga tushadi (tezroq kerak bo'lsa — "Hozir yangilash"). Netlify funksiyalari vaqt bilan cheklangan, shuning uchun yangilash bosqichlarga bo'lingan: vaqt tugasa, keyingi safar to'xtagan bosqichdan davom etadi. "Hozir yangilash" tugmasi ham shunday ishlaydi.
 
 #### Bir martalik sozlash
 
@@ -108,7 +108,7 @@ Shundan keyin GitHub'dagi `main` tarmog'iga har bir push saytni avtomatik yangil
 
 #### Tekin rejaga sig'adimi
 
-Ha, odatdagi foydalanishda: funksiya chaqiruvlari (har 5 daqiqada yangilash ≈ 9 000/oy + interfeys so'rovlari) Netlify'ning bepul limiti ichida, baza esa Neon'ning bepul rejasida (0,5 GB — bu ilova uchun yillarga yetadi). Netlify o'z limitlarini o'zgartirishi mumkin — **Usage** sahifasida kuzatib boring.
+Ha, odatdagi foydalanishda: funksiya chaqiruvlari (har 20 daqiqada yangilash ≈ 2 200/oy + interfeys so'rovlari) Netlify'ning bepul limiti ichida. Neon'ning bepul rejasida hajm 0,5 GB (bu ilova uchun yillarga yetadi) va **hisoblash vaqti oyiga 100 soat**. Baza 5 daqiqa ishlatilmasa uxlaydi va vaqt sarflamaydi — shuning uchun yangilash har 20 daqiqada (≈ 50 soat/oy). Jadvalni tezlashtirmang: har 5 daqiqada yangilash bazani doim uyg'oq ushlaydi va limit oy o'rtasida tugaydi. Sarfni Neon'ning **Usage** sahifasida kuzating. Netlify o'z limitlarini o'zgartirishi mumkin — **Usage** sahifasida kuzatib boring.
 
 ### Testlar
 
@@ -143,7 +143,7 @@ server/
   http/app.ts           API yo'llari
   container.ts          Qaysi adapter/provayder ishlatilishi faqat shu yerda hal qilinadi
 web/                    Interfeys (React + Vite), PWA fayllari web/public ichida
-netlify/functions/      Netlify: api.mts (API), uzum-sync.mts (har 5 daqiqada Uzum yangilash)
+netlify/functions/      Netlify: api.mts (API), uzum-sync.mts (har 20 daqiqada Uzum yangilash)
 netlify.toml            Netlify build va yo'naltirish sozlamalari
 ```
 

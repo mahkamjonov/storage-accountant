@@ -33,6 +33,9 @@ async function readJson(c: Context): Promise<Record<string, unknown>> {
 /** Bazaga ulanish xatosi bo'lsa — qisqa sababi (parolsiz), aks holda null. */
 function databaseProblem(err: unknown): string | null {
   const e = err as { code?: string; message?: string };
+  if (/quota|exceeded/i.test(e?.message ?? '')) {
+    return "bazaning bepul oylik limiti tugagan (Neon). Limit yangi oy boshida tiklanadi yoki Neon'da rejani oshiring";
+  }
   const codes = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', '28P01', '28000', '3D000', '08001', '08006', '57P01', '57P03', '53300'];
   const msg = e?.message ?? '';
   if ((e?.code && codes.includes(e.code)) || /connect|connection|password authentication|SSL|self.signed|certificate|Invalid URL|getaddrinfo|timeout/i.test(msg)) {

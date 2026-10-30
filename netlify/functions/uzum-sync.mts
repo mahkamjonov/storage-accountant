@@ -1,4 +1,6 @@
-// Netlify rejali funksiyasi: har 5 daqiqada Uzumdan yangilaydi.
+// Netlify rejali funksiyasi: har 20 daqiqada Uzumdan yangilaydi.
+// Nega 20: bepul Neon bazasi 5 daqiqa ishlatilmasa uxlaydi va hisoblash vaqti sarflanmaydi. Tez-tez yangilash bazani
+// doim uyg'oq ushlab, oylik bepul limitni tugatadi (har 5 daqiqada ≈ 180 soat/oy, limit 100).
 // Rejali funksiya 30 soniya bilan cheklangan — yangilash bosqichma-bosqich: vaqt tugasa, keyingi safar davom etadi.
 import type { Config } from '@netlify/functions';
 
@@ -10,7 +12,7 @@ export default async (): Promise<void> => {
   const { uzum } = await getContainer();
   if (!uzum.configured) return;
   try {
-    const r = await uzum.sync({ budgetMs: 20_000 });
+    const r = await uzum.sync({ budgetMs: 25_000 });
     console.log(
       `Uzum: ${r.done ? 'aylana tugadi' : 'davom etadi'} — ${r.documents} hujjat, ${r.changes.applied} yangi, ${r.changes.pending} kutilmoqda, ${r.changes.unmatched} bog'lanmagan.`,
     );
@@ -21,5 +23,5 @@ export default async (): Promise<void> => {
 };
 
 export const config: Config = {
-  schedule: '*/5 * * * *',
+  schedule: '*/20 * * * *',
 };

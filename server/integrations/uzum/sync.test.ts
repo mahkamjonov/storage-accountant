@@ -29,7 +29,9 @@ class FakeUzum implements UzumApi {
   async invoiceProducts() {
     return [];
   }
+  returnsPageCalls: number[] = [];
   async returnsPage(page: number, size: number) {
+    this.returnsPageCalls.push(page);
     return this.returns.slice(page * size, (page + 1) * size);
   }
   async fbsOrdersPage(q: { status: string; page: number; size: number }) {
@@ -323,5 +325,38 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     const again = await uzum.sync();
     expect(again.done).toBe(true);
     expect((await stock())['HOODIE-QORA']!.own).toBe(70);
+  });
+
+  it("qaytarishlar: har safar boshidan varaqlanmaydi, lekin yangi va kech yakunlanganlar yo'qolmaydi", async () => {
+    const { uzum, fake, stock, inventory, qora } = await setup();
+    await inventory.recordMovement({ variantId: qora.id, type: 'to_uzum', quantity: 50 });
+    // 120 ta eski (yakunlangan, boshlang'ich sanadan oldin) qaytarish — eskidan yangiga
+    const old = Array.from({ length: 120 }, (_, i) => ({
+      id: i + 1,
+      status: 'COMPLETED',
+      type: 'RETURN',
+      dateCreated: '2025-01-01T10:00:00',
+      completedDate: '2025-01-02T10:00:00',
+      returnItems: [{ id: 1, skuId: 11, amount: 1 }],
+    }));
+    // 30-qaytarish hali yakunlanmagan (1-sahifada)
+    old[29] = { ...old[29]!, status: 'CREATED', completedDate: undefined as unknown as string };
+    fake.returns = old;
+    await uzum.sync();
+    expect(fake.returnsPageCalls).toEqual([0, 1, 2]);
+
+    // Ikkinchi safar: yakunlanmagan qaytarish bor sahifadan (0) boshlanadi; keyin u yakunlanadi
+    fake.returnsPageCalls = [];
+    fake.returns[29] = { ...fake.returns[29]!, status: 'COMPLETED', completedDate: '2026-10-01T11:00:00' };
+    fake.returns.push({ id: 500, status: 'COMPLETED', type: 'RETURN', dateCreated: '2026-10-01T09:00:00', completedDate: '2026-10-01T10:00:00', returnItems: [{ id: 1, skuId: 11, amount: 2 }] });
+    await uzum.sync();
+    expect(fake.returnsPageCalls[0]).toBe(0);
+    expect((await stock())['HOODIE-QORA']).toMatchObject({ own: 53, uzum: 47 }); // 1 (kech yakunlangan) + 2 (yangi)
+
+    // Uchinchi safar: ochiq qaytarish qolmadi — oxirgi sahifadan boshlanadi
+    fake.returnsPageCalls = [];
+    await uzum.sync();
+    expect(fake.returnsPageCalls[0]).toBe(2);
+    expect((await stock())['HOODIE-QORA']).toMatchObject({ own: 53, uzum: 47 });
   });
 });

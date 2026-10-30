@@ -47,6 +47,8 @@ const KEY = {
   /** Yangilash qulfi: shu vaqtgacha (ms) boshqa yangilash boshlanmaydi. */
   lock: 'uzum.lockUntil',
   fbsOrderIds: 'uzum.fbsOrderIds',
+  /** Qaytarishlar ro'yxatini shu sahifadan o'qish (eskidan yangiga tartiblangan). */
+  returnsFrom: 'uzum.returnsFrom',
   /** Oxirgi yangilashda Uzum qaytargan do'konlar (keyingi bosqichlar shu ro'yxat bilan ishlaydi). */
   shopIds: 'uzum.shopIds',
 };
@@ -221,7 +223,7 @@ export class UzumSyncService {
       let ran = 0;
       while (stage < STAGES.length) {
         // Har chaqiruvda kamida bitta bosqich; keyingisi faqat vaqt yetarli bo'lsa.
-        if (ran > 0 && Date.now() - started >= budget / 2) break;
+        if (ran > 0 && Date.now() - started >= budget * 0.6) break;
         await this.runStage(api, STAGES[stage]!, report);
         stage += 1;
         ran += 1;
@@ -338,7 +340,7 @@ export class UzumSyncService {
             await this.repo.setSetting(KEY.fingerprint('invoice', inv.id), fp);
             report.documents += 1;
           }
-          if (invoices.length < DOC_PAGE_SIZE || this.allOlder(invoices.map((i) => i.dateCreated), syncFrom)) break;
+          if (invoices.length < DOC_PAGE_SIZE || this.olderPage(invoices.map((i) => ({ id: i.id, date: i.dateCreated })), syncFrom)) break;
         }
         return;
       }
@@ -346,21 +348,32 @@ export class UzumSyncService {
       // 4. Qaytarish nakladnoylari (Uzum omboridan sotuvchiga) → "Qaytdi"
       case 'returns': {
         const catalog = await this.loadCatalog();
-        for (let page = 0; page < PAGE_LIMIT; page++) {
+        // Ro'yxat eskidan yangiga: har safar boshidan varaqlamaymiz. Yakunlanmagan qaytarish bor eng birinchi sahifadan
+        // (yoki oxirgi sahifadan) boshlaymiz — yangi va hali yopilmaganlar shu yerda.
+        const startPage = Number((await this.repo.getSetting(KEY.returnsFrom)) ?? 0) || 0;
+        let firstOpen: number | null = null;
+        let lastNonEmpty = startPage;
+        for (let page = startPage; page < startPage + PAGE_LIMIT; page++) {
           const returns = await api.returnsPage(page, DOC_PAGE_SIZE);
+          if (returns.length > 0) lastNonEmpty = page;
           for (const ret of returns) {
+            const drafts = returnEvents(ret);
+            if (drafts === null && firstOpen === null) firstOpen = page; // hali yakunlanmagan — keyingi safar shu yerdan
             const date = parseUzumDate(ret.completedDate) ?? parseUzumDate(ret.dateCreated) ?? '9999';
-            if (date < syncFrom) continue;
+            if (date < syncFrom || drafts === null) continue;
             const fp = `${ret.status}|${ret.completedDate}|${ret.canceledDate}|${ret.returnItems?.length ?? 0}`;
             if ((await this.repo.getSetting(KEY.fingerprint('return', ret.id))) === fp) continue;
-            const drafts = returnEvents(ret);
-            if (drafts === null) continue; // hali yakunlanmagan
             for (const d of drafts) track(await this.processDraft(d, catalog));
             await this.repo.setSetting(KEY.fingerprint('return', ret.id), fp);
             report.documents += 1;
           }
-          if (returns.length < DOC_PAGE_SIZE || this.allOlder(returns.map((r) => r.dateCreated), syncFrom)) break;
+          if (returns.length < DOC_PAGE_SIZE) break;
+          // Yangidan eskiga tartiblangan bo'lsa (boshqa hisoblarda shunday bo'lishi mumkin) — eski sahifada to'xtaymiz.
+          if (this.olderPage(returns.map((r) => ({ id: r.id, date: r.completedDate ?? r.dateCreated })), syncFrom)) break;
         }
+        // Boshlang'ich sahifadan hech narsa kelmasa (ro'yxat qisqargan) — keyingi safar boshidan.
+        const next = lastNonEmpty === startPage && startPage > 0 ? 0 : Math.min(firstOpen ?? lastNonEmpty, lastNonEmpty);
+        await this.repo.setSetting(KEY.returnsFrom, String(next));
         return;
       }
 
@@ -423,12 +436,15 @@ export class UzumSyncService {
     return `${invoiceStatus(inv)}|${inv.totalToStock}|${lines.join(',')}`;
   }
 
-  /** Sahifadagi hamma hujjat boshlang'ich sanadan eski va ro'yxat yangidan eskiga tartiblangan bo'lsa — keyingi sahifalar kerak emas. */
-  private allOlder(dates: (string | number | null | undefined)[], syncFrom: string): boolean {
-    const parsed = dates.map((d) => parseUzumDate(d));
-    if (parsed.length === 0 || parsed.some((d) => d === null)) return false;
-    const descending = parsed.every((d, i) => i === 0 || d! <= parsed[i - 1]!);
-    return descending && parsed.every((d) => d! < syncFrom);
+  /**
+   * Sahifa yangidan eskiga tartiblangan (ID kamayib boradi) va undagi hamma hujjat boshlang'ich sanadan eski bo'lsa —
+   * keyingi sahifalar ham eski, varaqlash kerak emas. Tartib sanalar bo'yicha emas, ID bo'yicha aniqlanadi.
+   */
+  private olderPage(items: { id: number; date: string | number | null | undefined }[], syncFrom: string): boolean {
+    if (items.length === 0) return false;
+    const descending = items.every((x, i) => i === 0 || x.id < items[i - 1]!.id);
+    const dates = items.map((x) => parseUzumDate(x.date));
+    return descending && dates.every((d) => d !== null && d < syncFrom);
   }
 
   // ---------- Katalog bog'lash ----------

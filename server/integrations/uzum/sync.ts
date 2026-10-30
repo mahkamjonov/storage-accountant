@@ -221,7 +221,7 @@ export class UzumSyncService {
       let ran = 0;
       while (stage < STAGES.length) {
         // Har chaqiruvda kamida bitta bosqich; keyingisi faqat vaqt yetarli bo'lsa.
-        if (ran > 0 && Date.now() - started > budget / 2) break;
+        if (ran > 0 && Date.now() - started >= budget / 2) break;
         await this.runStage(api, STAGES[stage]!, report);
         stage += 1;
         ran += 1;

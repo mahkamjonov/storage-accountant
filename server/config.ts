@@ -2,6 +2,7 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { cleanDatabaseUrl } from './dbUrl.ts';
 
 if (existsSync('.env')) process.loadEnvFile('.env');
 
@@ -19,14 +20,16 @@ const serverless = Boolean(
 
 const dataDir = resolve(process.env.DATA_DIR ?? 'data');
 /** Postgres manzili: o'zingizniki yoki Netlify DB (Neon) avtomatik beradigan. */
-const databaseUrl = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || null;
+const rawDatabaseUrl = process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL || null;
+const databaseUrl = rawDatabaseUrl ? cleanDatabaseUrl(rawDatabaseUrl) : null;
 
 // Serverless'da noto'g'ri sozlangan holda ishga tushmaymiz — yetishmayotganlarning hammasini bir xabarda aytamiz.
 if (serverless) {
   const missing: string[] = [];
   if (!process.env.APP_PASSWORD) missing.push('APP_PASSWORD (kirish paroli)');
   if (!process.env.SESSION_SECRET) missing.push('SESSION_SECRET (kamida 32 belgili tasodifiy qator)');
-  if (!databaseUrl) missing.push('DATABASE_URL (Postgres manzili — neon.tech dan bepul)');
+  if (!rawDatabaseUrl) missing.push('DATABASE_URL (Postgres manzili — neon.tech dan bepul)');
+  else if (!databaseUrl) missing.push("to'g'ri DATABASE_URL — u postgresql:// bilan boshlanishi kerak");
   if (missing.length) {
     throw new Error(
       `Netlify'da yetishmayapti: ${missing.join('; ')}. Site configuration → Environment variables'da qo'shing, keyin Deploys → Trigger deploy.`,

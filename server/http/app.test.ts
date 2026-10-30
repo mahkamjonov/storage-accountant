@@ -89,4 +89,10 @@ describe('HTTP API', () => {
     });
     expect(res.status).toBe(400);
   });
+
+  it("/health — kirishsiz, bazaga ulanishni tekshiradi", async () => {
+    const res = await makeApp().request('/api/health');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, db: 'ok' });
+  });
 });

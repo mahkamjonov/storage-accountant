@@ -30,6 +30,17 @@ async function readJson(c: Context): Promise<Record<string, unknown>> {
   }
 }
 
+/** Bazaga ulanish xatosi bo'lsa — qisqa sababi (parolsiz), aks holda null. */
+function databaseProblem(err: unknown): string | null {
+  const e = err as { code?: string; message?: string };
+  const codes = ['ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', '28P01', '28000', '3D000', '08001', '08006', '57P01', '57P03', '53300'];
+  const msg = e?.message ?? '';
+  if ((e?.code && codes.includes(e.code)) || /connect|connection|password authentication|SSL|self.signed|certificate|Invalid URL|getaddrinfo|timeout/i.test(msg)) {
+    return msg.replace(/postgres(?:ql)?:\/\/\S+/g, '<DATABASE_URL>').slice(0, 200) || e.code || "noma'lum";
+  }
+  return null;
+}
+
 function intParam(value: string | undefined, fallback: number, max: number): number {
   const n = Number(value);
   return Number.isSafeInteger(n) && n >= 0 ? Math.min(n, max) : fallback;
@@ -42,10 +53,27 @@ export function createApp(deps: AppDeps) {
   app.onError((err, c) => {
     if (err instanceof AppError) return c.json({ error: { code: err.code, message: err.message } }, err.status);
     console.error(err);
+    const db = databaseProblem(err);
+    if (db) {
+      return c.json({ error: { code: 'DB_UNAVAILABLE', message: `Bazaga ulanib bo'lmadi: ${db}. DATABASE_URL sozlamasini tekshiring.` } }, 503);
+    }
+    // Tizimga kirgan sotuvchiga texnik sababni ham ko'rsatamiz — muammoni tez topish uchun.
+    const detail = c.get('user') && err instanceof Error ? ` (${err.message.slice(0, 200)})` : '';
     return c.json(
-      { error: { code: 'INTERNAL', message: "Kutilmagan xatolik yuz berdi. Bir ozdan keyin qaytadan urinib ko'ring." } },
+      { error: { code: 'INTERNAL', message: `Kutilmagan xatolik yuz berdi. Bir ozdan keyin qaytadan urinib ko'ring.${detail}` } },
       500,
     );
+  });
+
+  // Holatni tekshirish (kirishsiz): server ishlayaptimi va bazaga ulanadimi.
+  app.get('/health', async (c) => {
+    try {
+      const shops = await inventory.listShops();
+      return c.json({ ok: true, db: 'ok', shops: shops.length });
+    } catch (err) {
+      console.error(err);
+      return c.json({ ok: false, db: databaseProblem(err) ?? (err instanceof Error ? err.message : String(err)) }, 503);
+    }
   });
 
   // O'zgartiruvchi so'rovlar faqat JSON bo'lishi kerak: boshqa saytdan oddiy forma orqali yuborib bo'lmaydi.

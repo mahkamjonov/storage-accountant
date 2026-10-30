@@ -62,7 +62,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     throw new ApiError(
       res.status,
       data?.error?.code ?? 'UNKNOWN',
-      data?.error?.message ?? "Kutilmagan xatolik. Bir ozdan keyin qaytadan urinib ko'ring.",
+      data?.error?.message ?? `Server javob bermadi (${res.status}). Bir ozdan keyin qaytadan urinib ko'ring.`,
     );
   }
   if (method !== 'GET' && !path.startsWith('/auth/')) dataChanged.dispatchEvent(new Event('change'));

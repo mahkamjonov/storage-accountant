@@ -9,6 +9,8 @@ export async function createPgDriver(connectionString: string): Promise<PgDriver
     // Serverless funksiyada ulanishlar kam bo'lsin; Neon SSL talab qiladi.
     max: Number(process.env.PG_POOL_MAX ?? 3),
     idleTimeoutMillis: 10_000,
+    // Neon uxlab qolgan bazani uyg'otishi bir necha soniya oladi; undan uzoq kutmaymiz.
+    connectionTimeoutMillis: 8_000,
     // Tashqi baza (Neon va h.k.) — SSL majburiy, sertifikat tekshiriladi. Manzildagi sslmode ustun turadi.
     ssl: /localhost|127\.0\.0\.1/.test(connectionString) ? undefined : true,
   });

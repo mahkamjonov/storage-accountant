@@ -34,6 +34,7 @@ import {
   type VariantWithStock,
 } from '../../domain/index.ts';
 import type { MovementFilter, NewMovement, Repository } from '../storage/repository.ts';
+import { transitBySku } from '../integrations/uzum/transit.ts';
 
 export class AppError extends Error {
   constructor(
@@ -216,9 +217,10 @@ export class InventoryService {
     shopId?: string,
     hideUzumArchived = false,
   ): Promise<ProductWithStock[]> {
-    const [variants, uzumSkus] = await Promise.all([
+    const [variants, uzumSkus, transit] = await Promise.all([
       this.repo.listVariants({ includeArchived: includeArchivedVariants, shopId }),
       this.repo.listUzumSkus(),
+      transitBySku(this.repo),
     ]);
     const movements = await this.repo.listMovements({ variantIds: variants.map((v) => v.id) });
     const uzumQty = new Map(uzumSkus.map((s) => [s.skuId, s.quantityActive]));
@@ -266,8 +268,8 @@ export class InventoryService {
           low: !v.archived && lastMovementAt !== null && isLowStock(stock, p.lowStockThreshold),
           lastMovementAt,
           uzumReported,
-          // Uzum sotuvda deb ko'rsatgandan ortig'i hali yo'lda yoki qabul qilinmoqda.
-          transit: uzumReported !== null ? Math.max(0, stock.uzum - Math.max(0, uzumReported)) : 0,
+          // Uzum hali qabul qilmagan nakladnoylardagi son (ilovadagi Uzumdagi qoldiqdan oshmaydi).
+          transit: v.uzumSkuId !== null ? Math.min(transit.get(v.uzumSkuId) ?? 0, Math.max(0, stock.uzum)) : 0,
           image: (v.uzumSkuId !== null ? imageBySku.get(v.uzumSkuId) : undefined) ?? productImage,
         };
       });

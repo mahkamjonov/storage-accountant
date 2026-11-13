@@ -24,12 +24,15 @@ import {
 } from '../../../domain/index.ts';
 import { AppError, type InventoryService } from '../../services/inventory.ts';
 import type { Repository, UzumEventInput } from '../../storage/repository.ts';
+import { OPEN_INVOICES_KEY, readOpenInvoices } from './transit.ts';
 import { FBS_STATUSES, UzumApiError, type RawFbsOrder, type RawInvoice, type UzumApi } from './client.ts';
 import {
   candidateCodes,
   fbsOrderEvents,
   financeOrderEvents,
   invoiceEvents,
+  invoiceInTransit,
+  invoiceSkuQuantities,
   invoiceStatus,
   mapCatalog,
   parseCharacteristics,
@@ -51,6 +54,8 @@ const KEY = {
   returnsFrom: 'uzum.returnsFrom',
   /** Oxirgi yangilashda Uzum qaytargan do'konlar (keyingi bosqichlar shu ro'yxat bilan ishlaydi). */
   shopIds: 'uzum.shopIds',
+  /** Uzum hali qabul qilmagan nakladnoylar: { invoiceId: { skuId: son } } — "Yetkazishda" shundan hisoblanadi. */
+  openInvoices: OPEN_INVOICES_KEY,
 };
 
 /** Yangilash bosqichlari tartibi. */
@@ -345,6 +350,7 @@ export class UzumSyncService {
               ? inv.productForInvoiceDto
               : await api.invoiceProducts(inv.shopId ?? shopIds[0]!, inv.id);
             for (const d of invoiceEvents(inv, products)) track(await this.processDraft(d, catalog));
+            await this.setOpenInvoice(inv.id, invoiceInTransit(inv) ? invoiceSkuQuantities(products) : null);
             await this.repo.setSetting(KEY.fingerprint('invoice', inv.id), fp);
             report.documents += 1;
           }
@@ -439,9 +445,19 @@ export class UzumSyncService {
     }
   }
 
+  /** Ochiq (Uzum hali qabul qilmagan) nakladnoylar ro'yxatini yangilaydi. `skus` null — nakladnoy yopildi. */
+  private async setOpenInvoice(invoiceId: number, skus: Record<string, number> | null): Promise<void> {
+    const open = await readOpenInvoices(this.repo);
+    if (skus && Object.keys(skus).length > 0) open[String(invoiceId)] = skus;
+    else if (String(invoiceId) in open) delete open[String(invoiceId)];
+    else return;
+    await this.repo.setSetting(KEY.openInvoices, JSON.stringify(open));
+  }
+
   private invoiceFingerprint(inv: RawInvoice): string {
     const lines = (inv.productForInvoiceDto ?? []).flatMap((p) => (p.skuForInvoiceDtoList ?? []).map((s) => `${s.id}:${s.quantityToStock}`));
-    return `${invoiceStatus(inv)}|${inv.totalToStock}|${lines.join(',')}`;
+    // "v2" — "Yetkazishda" qo'shilganda barcha nakladnoylar bir marta qayta o'qilsin (yozuvlar takrorlanmaydi).
+    return `v2|${invoiceStatus(inv)}|${inv.dateAccepted ?? ''}|${inv.totalToStock}|${lines.join(',')}`;
   }
 
   /**

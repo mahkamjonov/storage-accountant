@@ -23,7 +23,7 @@ export function HomePage() {
             {overview.error ? (
               <ErrorBox error={overview.error} onRetry={overview.reload} />
             ) : data ? (
-              <StockFigures stock={data.totals} transit={uzumLinked ? data.transit : undefined} size="lg" />
+              <StockFigures stock={data.totals} size="lg" />
             ) : (
               <div className="figures figures--lg is-loading" aria-label="Yuklanmoqda" />
             )}

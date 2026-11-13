@@ -25,6 +25,8 @@ export interface RawProductCard {
   productId: number;
   title?: string;
   previewImg?: string | null;
+  /** Kartochka holati: ARCHIVED / DELETED — Uzumda arxivda. */
+  status?: { value?: string | null } | null;
   skuList?: RawSku[];
 }
 

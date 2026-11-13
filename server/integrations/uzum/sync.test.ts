@@ -275,7 +275,12 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     expect(v.stock).toEqual({ own: 6, uzum: 6, total: 12 });
     expect(v.transit).toBe(4);
 
-    fake.cards[fake.cards.length - 1]!.skuList![0]!.quantityActive = 6; // Uzum qabul qildi, sotuvga chiqdi
+    // Uzumdagi sotuvdagi son o'zgarmasa ham, hisob nakladnoy bo'yicha: hali qabul qilinmagan — Yetkazishda
+    fake.cards[fake.cards.length - 1]!.skuList![0]!.quantityActive = 0;
+    await uzum.sync();
+    expect((await parda()).variants[0]!.transit).toBe(4);
+
+    fake.invoices = [invoice(5, [{ skuId: 41, qty: 4 }], 'ACCEPTED')]; // Uzum qabul qildi — endi "Uzumda"
     await uzum.sync();
     v = (await parda()).variants[0]!;
     expect(v.transit).toBe(0);
@@ -300,6 +305,15 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     expect((await inventory.listProducts(shop.id)).find((p) => p.uzumProductId === 900)).toBeUndefined();
     const all = (await inventory.listProducts(shop.id, { includeArchived: true })).find((p) => p.uzumProductId === 900)!;
     expect(all.variants).toHaveLength(2);
+
+    // Uzum kartochkaning o'zini "Arxiv" holatiga o'tkazsa (SKU'lar belgilanmagan bo'lsa ham) — ko'rinmaydi
+    const tyul = card(901, 'Tyul', [{ skuId: 61, code: 'TYUL-1', qty: 3 }]);
+    fake.cards.push(tyul);
+    await uzum.sync();
+    expect((await inventory.listProducts(shop.id)).some((p) => p.uzumProductId === 901)).toBe(true);
+    tyul.status = { value: 'ARCHIVED' };
+    await uzum.sync();
+    expect((await inventory.listProducts(shop.id)).some((p) => p.uzumProductId === 901)).toBe(false);
   });
 
   it("do'kon ulanganda Uzum katalogi o'zi import qilinadi: kartochka, SKU'lar va Uzumdagi qoldiq", async () => {

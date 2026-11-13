@@ -38,6 +38,8 @@ export function mapCatalog(cards: RawProductCard[], shopId = 0, now = new Date()
   const result: UzumSku[] = [];
   const seen = new Set<number>();
   for (const card of cards) {
+    // Kartochka arxivda bo'lsa, uning barcha SKU'lari ham arxivda deb hisoblanadi.
+    const cardArchived = /ARCHIVED|DELETED/i.test(str(card.status?.value) ?? '');
     for (const sku of card.skuList ?? []) {
       if (typeof sku.skuId !== 'number' || seen.has(sku.skuId)) continue;
       seen.add(sku.skuId);
@@ -55,7 +57,7 @@ export function mapCatalog(cards: RawProductCard[], shopId = 0, now = new Date()
         characteristics: str(sku.characteristics),
         image: str(sku.previewImage) ?? str(card.previewImg),
         quantityActive: Math.max(0, int(sku.quantityActive)),
-        archived: sku.archived === true,
+        archived: sku.archived === true || cardArchived,
         updatedAt: now,
       });
     }
@@ -121,6 +123,29 @@ function isCancelled(status: string | null | undefined): boolean {
 
 export function invoiceStatus(inv: RawInvoice): string {
   return str(inv.invoiceStatus?.value) ?? str(inv.status) ?? '';
+}
+
+/**
+ * Nakladnoy hali Uzum tomonidan qabul qilinmaganmi (yaratilgan, yo'lda, qabul qilinmoqda)?
+ * Shunday nakladnoydagi sonlar "Yetkazishda" hisoblanadi; qabul qilingach — "Uzumda".
+ */
+export function invoiceInTransit(inv: RawInvoice): boolean {
+  const status = invoiceStatus(inv);
+  if (isCancelled(status) || /REJECT/i.test(status)) return false;
+  if (inv.dateAccepted || /^ACCEPTED|COMPLET|CLOSED|FINISH/i.test(status)) return false;
+  return true;
+}
+
+/** Nakladnoydagi SKU'lar va sonlari: { skuId: son }. */
+export function invoiceSkuQuantities(products: RawInvoiceProduct[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of products) {
+    for (const s of p.skuForInvoiceDtoList ?? []) {
+      const q = Math.max(0, int(s.quantityToStock));
+      if (q > 0) out[String(s.id)] = (out[String(s.id)] ?? 0) + q;
+    }
+  }
+  return out;
 }
 
 /** Nakladnoy tarkibidagi har bir SKU — "Uzumga jo'natdim". Omborimdan shu son chiqib ketgan. */

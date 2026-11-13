@@ -1,4 +1,4 @@
-// Uzum Market: do'kon tanlash, holat, qo'lda yangilash, kutilayotgan va oxirgi yozuvlar. Kartochkalar Uzumdan o'zi qo'shiladi.
+// Profil: do'kon tanlash, Uzum bilan bog'lanish holati, yangilash, omborda yetmaganlar, oxirgi Uzum yozuvlari va chiqish.
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDateLabel, type UzumEvent, type UzumEventKind } from '../../../domain/index.ts';
@@ -20,13 +20,13 @@ const KIND_LABEL: Record<UzumEventKind, string> = {
   returned: 'Qaytdi',
 };
 
-export function UzumPage() {
+export function ProfilePage() {
   const status = useAsync(() => api.uzumStatus(), []);
   const s = status.data;
 
   return (
     <div className="page">
-      <PageHeader title="Uzum" />
+      <PageHeader title="Profil" />
       <ShopSwitcher />
       {status.loading && !s ? (
         <SkeletonList rows={3} />
@@ -118,7 +118,7 @@ function Connected() {
         imported && `${imported} ta yangi SKU qo'shildi`,
         c.applied && `${c.applied} ta yangi yozuv`,
         c.cancelled && `${c.cancelled} ta bekor qilindi`,
-        c.pending && `${c.pending} ta kutmoqda`,
+        c.pending && `${c.pending} tasi omborda yetmadi`,
       ].filter(Boolean);
       toast.show({ tone: 'ok', message: parts.length ? `Yangilandi: ${parts.join(', ')}` : "Yangilandi. Yangi o'zgarish yo'q." });
     } catch (err) {
@@ -139,7 +139,7 @@ function Connected() {
           <div className="sync-card__text">
             <p className="sync-card__title">
               <span className={`dot ${s.lastError ? 'dot--error' : 'dot--ok'}`} aria-hidden="true" />
-              {s.lastError ? 'Yangilashda muammo' : "Bog'langan"}
+              {s.lastError ? 'Uzum bilan bog\'lanishda muammo' : "Uzum bilan bog'langan"}
             </p>
             <p className="sync-card__meta">{s.lastSyncAt ? `Yangilandi ${timeAgo(s.lastSyncAt)}` : 'Hali yangilanmagan'}</p>
             {s.lastError && <p className="notice notice--error">{s.lastError}</p>}
@@ -155,9 +155,12 @@ function Connected() {
       {pending.length > 0 && (
         <section aria-labelledby="pending-title">
           <h2 id="pending-title" className="section-title">
-            Kutilmoqda — {pending.length} ta
+            Omborda yetmadi — {pending.length} ta
           </h2>
-          <p className="section-hint">Omborda yetarli emas. Qoldiq to'g'rilansa, o'zi yoziladi.</p>
+          <p className="section-hint">
+            Uzum bularni jo'natilgan yoki sotilgan deb ko'rsatdi, lekin ilovada omboringizda shuncha yo'q edi. Mahsulotni omborga qo'shsangiz,
+            o'zi hisoblanadi.
+          </p>
           <ul className="list" role="list">
             {pending.map((e) => (
               <EventRow key={e.id} event={e} target={e.variantId ? lookup.get(e.variantId) : undefined} />
@@ -239,7 +242,7 @@ function EventRow({ event: e, target }: { event: UzumEvent; target: VariantRef |
             {e.kind === 'sold' && e.location === 'own' ? ' (FBS)' : ''}: {num(e.quantity)} ta
           </span>
           {e.status === 'cancelled' && <span className="badge badge--muted">Uzumda bekor qilingan</span>}
-          {e.status === 'pending' && <span className="badge badge--warn">Kutilmoqda</span>}
+          {e.status === 'pending' && <span className="badge badge--warn">Omborda yetmadi</span>}
         </div>
         {target ? (
           <Link to={`/mahsulotlar/${target.product.id}`} className="move__product">

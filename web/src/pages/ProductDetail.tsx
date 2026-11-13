@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { TYPE_LABEL, type MovementType, type VariantWithStock } from '../../../domain/index.ts';
+import type { MovementType, VariantWithStock } from '../../../domain/index.ts';
 import { api } from '../api.ts';
 import { Icon } from '../components/Icon.tsx';
 import { PageHeader } from '../components/Layout.tsx';
 import { MovementList, variantLookup } from '../components/MovementList.tsx';
 import { useToast } from '../components/Toast.tsx';
-import { ConfirmDialog, Empty, ErrorBox, Loading, SkeletonList, StockFigures } from '../components/ui.tsx';
+import { ConfirmDialog, Empty, ErrorBox, Loading, SkeletonList, StockFigures, Thumb } from '../components/ui.tsx';
 import { num, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
-import { entryPath, EXTRA_TYPES, MAIN_TYPE, MANUAL_UZUM_TYPES } from '../movementUi.ts';
+import { ACTION_LABEL, entryPath, EXTRA_TYPES, MAIN_TYPE, MANUAL_UZUM_TYPES } from '../movementUi.ts';
 import { useShop } from '../shop.tsx';
 
 const HISTORY_PAGE = 50;
@@ -52,20 +52,24 @@ export function ProductDetailPage() {
   return (
     <div className="page">
       <PageHeader
-        title={p.name}
-        subtitle={
-          single
-            ? [single.attributes.length ? variantName(single) : null, single.code].filter(Boolean).join(' · ') || undefined
-            : `${active.length} ta SKU`
-        }
+        title="Mahsulot"
         back="/mahsulotlar"
         actions={
-          <Link to={`${here}/tahrirlash`} className="btn btn--secondary btn--sm">
-            <Icon name="edit" size={18} />
-            Tahrirlash
+          <Link to={`${here}/tahrirlash`} className="icon-btn" aria-label="Tahrirlash" title="Tahrirlash">
+            <Icon name="edit" size={20} />
           </Link>
         }
       />
+
+      <div className="product-hero">
+        <Thumb src={p.image} size="lg" />
+        <div className="product-hero__text">
+          <h2 className="product-hero__name clamp-2" title={p.name}>
+            {p.name}
+          </h2>
+          <p className="product-hero__meta">{single ? (single.attributes.length ? variantName(single) : '') : `${active.length} ta SKU`}</p>
+        </div>
+      </div>
 
       {p.archived && (
         <p className="notice notice--muted">Bu mahsulot arxivda. Harakat kiritish uchun avval "Tahrirlash" orqali arxivdan chiqaring.</p>
@@ -84,7 +88,7 @@ export function ProductDetailPage() {
                   <span className="action__icon">
                     <Icon name={t} size={20} />
                   </span>
-                  {TYPE_LABEL[t]}
+                  {ACTION_LABEL[t]}
                 </Link>
               ))}
             </section>
@@ -117,7 +121,7 @@ export function ProductDetailPage() {
             ) : history.error ? (
               <ErrorBox error={history.error} onRetry={history.reload} />
             ) : history.data!.movements.length === 0 ? (
-              <Empty title="Hali harakat yo'q">Mahsulot kelganda "Mahsulot keldi"ni bosing.</Empty>
+              <Empty title="Hali harakat yo'q">Mahsulot kelganda "Omborga qo'shish"ni bosing.</Empty>
             ) : (
               <>
                 <MovementList movements={history.data!.movements} lookup={lookup} show={p.variants.length > 1 ? 'variant' : 'none'} />

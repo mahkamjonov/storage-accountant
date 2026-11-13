@@ -5,7 +5,7 @@ import { Icon, type IconName } from './Icon.tsx';
 const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Bosh sahifa', icon: 'home', end: true },
   { to: '/mahsulotlar', label: 'Mahsulotlar', icon: 'box' },
-  { to: '/uzum', label: 'Uzum', icon: 'uzum' },
+  { to: '/profil', label: 'Profil', icon: 'user' },
 ];
 
 /** Asosiy sahifalar: telefonda pastda tablar, kompyuterda chapda menyu. */

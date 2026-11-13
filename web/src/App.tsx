@@ -7,7 +7,7 @@ import { EntryPage } from './pages/Entry.tsx';
 import { ProductDetailPage } from './pages/ProductDetail.tsx';
 import { EditProductPage, NewProductPage } from './pages/ProductForm.tsx';
 import { ProductsPage } from './pages/Products.tsx';
-import { UzumPage } from './pages/Uzum.tsx';
+import { ProfilePage } from './pages/Profile.tsx';
 import { useSession } from './session.tsx';
 
 function RequireLogin() {
@@ -35,7 +35,8 @@ export function App() {
         <Route path="mahsulotlar/yangi" element={<NewProductPage />} />
         <Route path="mahsulotlar/:id" element={<ProductDetailPage />} />
         <Route path="mahsulotlar/:id/tahrirlash" element={<EditProductPage />} />
-        <Route path="uzum" element={<UzumPage />} />
+        <Route path="profil" element={<ProfilePage />} />
+        <Route path="uzum" element={<Navigate to="/profil" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

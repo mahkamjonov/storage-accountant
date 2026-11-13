@@ -2,9 +2,10 @@
 
 Uzum Market sotuvchisi uchun ombor hisobi. Har bir harakat alohida yozuv bo'lib saqlanadi, qoldiqni esa ilova o'zi hisoblaydi. Qoldiq hech qachon qo'lda tahrirlanmaydi va bazada alohida saqlanmaydi.
 
-- **Sotuvchi faqat "Mahsulot keldi"ni kiritadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Kerak bo'lsa — "Sanab tuzatish" va "Brak".
+- **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Kerak bo'lsa, mahsulot sahifasida "Sanab tuzatish" bor.
+- **Bosh sahifa sodda**: jami qoldiq (omborda / Uzumda), "Omborga qo'shish" tugmasi va kam qolgan mahsulotlar. Mahsulotlar Uzumdagi asosiy rasmi bilan, uzun nomlar 2 qatorgacha qisqartiriladi.
 - **Qolganini Uzum o'zi beradi**: Uzumga jo'natish (nakladnoy), sotuvlar (FBO — Uzum omboridan, **FBS — omborimdan**) va qaytarishlar avtomatik yoziladi.
-- **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon yuqoridagi tanlagichdan almashtiriladi (Uzum seller'dagi kabi).
+- **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon **Profil** sahifasida almashtiriladi.
 - **Mahsulot = kartochka, ichida SKU'lar** — xuddi Uzumdagidek: "Hoodie" kartochkasi, ichida Qora M, Qora L, Oq M ... Har bir SKU'ning o'z kodi va o'z qoldig'i bor.
 - Telefon uchun qilingan, kompyuterda ham qulay. PWA sifatida telefonga o'rnatsa bo'ladi.
 - Yozuvlar o'chirilmaydi. Xato bo'lsa, yozuv **bekor qilinadi**: qoldiqqa ta'sir qilmaydi, lekin mahsulot sahifasidagi harakatlar ro'yxatida ko'rinib turadi.
@@ -100,7 +101,7 @@ Netlify'da ilova shunday ishlaydi:
 | `UZUM_API_KEY` | Uzum Seller API kaliti |
 
 4. **Qayta joylang**: **Deploys → Trigger deploy → Deploy site**. Tayyor: `https://<sayt-nomi>.netlify.app`.
-5. Saytga kiring → **Uzum** → **Hozir yangilash**. Kartochkalar SKU'lari bilan o'zi qo'shiladi → keyin omborimdagi sonlarni **Sanab tuzatish** bilan kiriting.
+5. Saytga kiring → **Profil** → **Hozir yangilash**. Kartochkalar SKU'lari bilan o'zi qo'shiladi → keyin omborimdagi sonlarni **Sanab tuzatish** bilan kiriting.
 
 Shundan keyin GitHub'dagi `main` tarmog'iga har bir push saytni avtomatik yangilaydi.
 
@@ -229,7 +230,7 @@ Har yangilashda Uzum katalogi tekshiriladi: ilovadagi SKU artikuli Uzumdagi SKU 
 
 ### Qoldiq qoidalari saqlanadi
 
-Uzumdan kelgan yozuv qoldiqni manfiy qiladigan bo'lsa (masalan, "Mahsulot keldi" kiritilmagan), u yozilmaydi va **Kutilmoqda** bo'lib turadi. Sababi va nima qilish kerakligi yozib qo'yiladi. Qoldiqni to'g'irlashingiz bilan (masalan, "Mahsulot keldi"ni kiritsangiz) u o'zi yoziladi. Avtomatik yozuvni qo'lda bekor qilsangiz, Uzumdan qayta yozilmaydi.
+Uzumdan kelgan yozuv qoldiqni manfiy qiladigan bo'lsa (masalan, mahsulot omborga qo'shilmagan), u yozilmaydi va Profil sahifasida **Omborda yetmadi** ro'yxatida turadi. Mahsulotni omborga qo'shsangiz, u o'zi yoziladi. Avtomatik yozuvni qo'lda bekor qilsangiz, Uzumdan qayta yozilmaydi.
 
 ### Qaysi sanadan
 

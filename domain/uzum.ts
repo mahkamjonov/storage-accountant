@@ -22,6 +22,17 @@ export interface UzumSku {
   updatedAt: string;
 }
 
+/**
+ * Uzum rasm manzili kengaytmasiz keladi (https://images.uzum.uz/<id>) va o'zi ochilmaydi —
+ * ro'yxat uchun kichik nusxasini qaytaramiz.
+ */
+export function uzumThumbUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const url = raw.trim();
+  if (/^https:\/\/images\.uzum\.uz\/[A-Za-z0-9_-]+\/?$/.test(url)) return `${url.replace(/\/$/, '')}/t_product_240_high.jpg`;
+  return /^https:\/\//.test(url) ? url : null;
+}
+
 /** Uzumdan kelgan hodisa qaysi harakatga aylanadi. */
 export type UzumEventKind = 'to_uzum' | 'sold' | 'returned';
 

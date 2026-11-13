@@ -18,6 +18,7 @@ import {
   previewMovement,
   sumStocks,
   todayIso,
+  uzumThumbUrl,
   variantLabel,
   type Attribute,
   type Location,
@@ -86,6 +87,7 @@ export interface RecordResult {
 export interface LowStockItem {
   productId: string;
   productName: string;
+  productImage: string | null;
   variant: VariantWithStock;
 }
 
@@ -211,6 +213,15 @@ export class InventoryService {
     ]);
     const movements = await this.repo.listMovements({ variantIds: variants.map((v) => v.id) });
     const uzumQty = new Map(uzumSkus.map((s) => [s.skuId, s.quantityActive]));
+    // Kartochka rasmi: Uzum kartochkasi bo'yicha, bo'lmasa bog'langan SKU'lardan birinchisi.
+    const imageByUzumProduct = new Map<number, string>();
+    const imageBySku = new Map<number, string>();
+    for (const s of uzumSkus) {
+      const url = uzumThumbUrl(s.image);
+      if (!url) continue;
+      if (!imageByUzumProduct.has(s.productId)) imageByUzumProduct.set(s.productId, url);
+      imageBySku.set(s.skuId, url);
+    }
     const movesByVariant = new Map<string, Movement[]>();
     for (const m of movements) {
       const list = movesByVariant.get(m.variantId);
@@ -249,6 +260,10 @@ export class InventoryService {
         stock: active.length ? sumStocks(active.map((v) => v.stock)) : EMPTY_STOCK,
         low: active.some((v) => v.low),
         lastMovementAt,
+        image:
+          (p.uzumProductId != null ? imageByUzumProduct.get(p.uzumProductId) : undefined) ??
+          vs.map((v) => (v.uzumSkuId !== null ? imageBySku.get(v.uzumSkuId) : undefined)).find(Boolean) ??
+          null,
       };
     });
   }
@@ -299,7 +314,7 @@ export class InventoryService {
     const products = await this.listProducts(shopId);
     const low: LowStockItem[] = [];
     for (const p of products) {
-      for (const v of p.variants) if (v.low) low.push({ productId: p.id, productName: p.name, variant: v });
+      for (const v of p.variants) if (v.low) low.push({ productId: p.id, productName: p.name, productImage: p.image, variant: v });
     }
     low.sort((a, b) => a.variant.stock.total - b.variant.stock.total);
     return {

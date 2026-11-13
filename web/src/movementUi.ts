@@ -26,6 +26,17 @@ export function entryPath(type: MovementType, opts: { variantId?: string; produc
 
 /** Sotuvchi o'zi kiritadigan amallar. Uzum bilan bog'langan do'konda jo'natish, sotuv va qaytarish Uzumdan avtomatik keladi. */
 export const MAIN_TYPE: MovementType = 'received';
-export const EXTRA_TYPES: MovementType[] = ['adjustment', 'written_off'];
+/** Mahsulot sahifasida qo'shimcha amal (bosh sahifada ko'rinmaydi). */
+export const EXTRA_TYPES: MovementType[] = ['adjustment'];
+
+/** Tugma va sahifa sarlavhalari: "nima qilaman" shaklida. Tarixdagi yozuv nomi esa TYPE_LABEL. */
+export const ACTION_LABEL: Record<MovementType, string> = {
+  received: "Omborga qo'shish",
+  to_uzum: "Uzumga jo'natdim",
+  sold: 'Sotildi',
+  returned: 'Qaytdi',
+  written_off: "Brak / yo'qolgan",
+  adjustment: 'Sanab tuzatish',
+};
 /** Faqat Uzumga bog'lanmagan do'konda qo'lda kiritiladi. */
 export const MANUAL_UZUM_TYPES: MovementType[] = ['to_uzum', 'sold', 'returned'];

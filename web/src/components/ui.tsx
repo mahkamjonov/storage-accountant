@@ -36,6 +36,20 @@ export function ErrorBox({ error, onRetry }: { error: Error; onRetry?: () => voi
   );
 }
 
+/** Mahsulotning Uzumdagi asosiy rasmi; rasm bo'lmasa yoki ochilmasa — quti belgisi. */
+export function Thumb({ src, size = 'md' }: { src: string | null | undefined; size?: 'md' | 'lg' }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={`thumb thumb--${size}`} aria-hidden="true">
+      {src && !failed ? (
+        <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      ) : (
+        <Icon name="box" size={size === 'lg' ? 28 : 20} />
+      )}
+    </span>
+  );
+}
+
 export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
     <div className="empty">

@@ -71,6 +71,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export interface LowStockItem {
   productId: string;
   productName: string;
+  productImage: string | null;
   variant: VariantWithStock;
 }
 

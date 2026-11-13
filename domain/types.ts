@@ -128,4 +128,6 @@ export interface ProductWithStock extends Product {
   /** Kamida bitta variant tugab qolmoqda. */
   low: boolean;
   lastMovementAt: string | null;
+  /** Uzumdagi asosiy rasm (kichik o'lchamda); Uzumga bog'lanmagan bo'lsa — null. */
+  image: string | null;
 }

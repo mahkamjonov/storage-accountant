@@ -1,26 +1,21 @@
-// Bosh sahifa: qoldiq, "Mahsulot keldi", bugun Uzumdan kelganlar va tugab qolayotganlar. Faqat kerakli narsa.
+// Bosh sahifa: jami qoldiq, "Omborga qo'shish" va kam qolgan mahsulotlar. Boshqa hech narsa.
 import { Link } from 'react-router-dom';
-import { TYPE_LABEL, type MovementType } from '../../../domain/index.ts';
-import { api, type Overview } from '../api.ts';
+import { api } from '../api.ts';
 import { Icon } from '../components/Icon.tsx';
-import { UzumBanner } from '../components/UzumBanner.tsx';
-import { Empty, ErrorBox, StockFigures } from '../components/ui.tsx';
-import { fullName, num } from '../format.ts';
+import { Empty, ErrorBox, StockFigures, Thumb } from '../components/ui.tsx';
+import { num, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
-import { entryPath, EXTRA_TYPES, MAIN_TYPE, MANUAL_UZUM_TYPES } from '../movementUi.ts';
+import { ACTION_LABEL, entryPath, MAIN_TYPE } from '../movementUi.ts';
 import { useShop } from '../shop.tsx';
 
 export function HomePage() {
   const overview = useAsync(() => api.overview(), []);
   const data = overview.data;
   const { shop, uzumLinked } = useShop();
-  const tiles: MovementType[] = [...EXTRA_TYPES, ...(uzumLinked ? [] : MANUAL_UZUM_TYPES)];
 
   return (
     <div className="page page--home">
       <h1 className="home-title">{shop?.name ?? 'Ombor'}</h1>
-
-      <UzumBanner />
 
       <section className="home-grid">
         <div className="home-grid__summary">
@@ -35,31 +30,15 @@ export function HomePage() {
           </section>
 
           <Link to={entryPath(MAIN_TYPE)} state={{ from: '/' }} className="hero-action">
-            <span className="hero-action__icon">
-              <Icon name="received" size={28} />
-            </span>
-            <span className="hero-action__label">{TYPE_LABEL[MAIN_TYPE]}</span>
-            <Icon name="chevron" size={22} className="hero-action__chevron" />
+            <Icon name="plus" size={22} />
+            {ACTION_LABEL[MAIN_TYPE]}
           </Link>
-
-          <div className={`tiles${tiles.length > 2 ? ' tiles--many' : ''}`}>
-            {tiles.map((t) => (
-              <Link key={t} to={entryPath(t)} state={{ from: '/' }} className={`tile action--${t}`}>
-                <span className="action__icon">
-                  <Icon name={t} size={20} />
-                </span>
-                <span className="tile__label">{TYPE_LABEL[t]}</span>
-              </Link>
-            ))}
-          </div>
-
-          {uzumLinked && data && <UzumToday today={data.uzumToday} />}
         </div>
 
         <div className="home-grid__low">
           {data && data.productCount === 0 ? (
             uzumLinked ? (
-              <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>
+              <Empty title="Hali mahsulot yo'q">Uzumdagi mahsulotlaringiz bir necha daqiqada o'zi chiqadi.</Empty>
             ) : (
               <Empty
                 title="Hali mahsulot yo'q"
@@ -76,20 +55,26 @@ export function HomePage() {
             data.low.length > 0 && (
               <section aria-labelledby="low-title">
                 <h2 id="low-title" className="section-title">
-                  Tugab qolmoqda
+                  Kam qolganlar
                 </h2>
                 <ul className="list" role="list">
-                  {data.low.map(({ productId, productName, variant: v }) => (
+                  {data.low.map(({ productId, productName, productImage, variant: v }) => (
                     <li key={v.id}>
                       <Link to={`/mahsulotlar/${productId}`} className="row row--link">
+                        <Thumb src={productImage} />
                         <span className="row__main">
-                          <span className="row__title">{fullName({ name: productName }, v)}</span>
-                          <span className="row__meta">
-                            Omborda {num(v.stock.own)} · Uzumda {num(v.stock.uzum)}
+                          <span className="row__title">
+                            <span className="clamp-2">{productName}</span>
                           </span>
+                          {v.attributes.length > 0 && <span className="row__meta">{variantName(v)}</span>}
                         </span>
-                        <span className={`badge ${v.stock.total === 0 ? 'badge--danger' : 'badge--warn'}`}>
-                          {v.stock.total === 0 ? 'Tugadi' : `${num(v.stock.total)} ta`}
+                        <span className="row__stock">
+                          <span className="chip chip--own is-strong">
+                            Omborda <b>{num(v.stock.own)}</b>
+                          </span>
+                          <span className="chip chip--uzum">
+                            Uzumda <b>{num(v.stock.uzum)}</b>
+                          </span>
                         </span>
                       </Link>
                     </li>
@@ -101,28 +86,5 @@ export function HomePage() {
         </div>
       </section>
     </div>
-  );
-}
-
-/** Bugun Uzumdan avtomatik kelganlar. Hech narsa bo'lmasa — ko'rsatilmaydi. */
-function UzumToday({ today }: { today: Overview['uzumToday'] }) {
-  const items = [
-    { label: "Jo'natildi", value: today.to_uzum },
-    { label: 'Sotildi', value: today.sold_fbo },
-    { label: 'Sotildi (FBS)', value: today.sold_fbs },
-    { label: 'Qaytdi', value: today.returned },
-  ].filter((i) => i.value > 0);
-  if (items.length === 0) return null;
-  return (
-    <Link to="/uzum" className="card uzum-today">
-      <span className="uzum-today__title">Bugun Uzumdan</span>
-      <span className="uzum-today__list">
-        {items.map((i) => (
-          <span key={i.label} className="uzum-today__item">
-            {i.label} <b>{num(i.value)}</b>
-          </span>
-        ))}
-      </span>
-    </Link>
   );
 }

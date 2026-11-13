@@ -6,7 +6,7 @@ import { api } from '../api.ts';
 import { Icon } from '../components/Icon.tsx';
 import { PageHeader } from '../components/Layout.tsx';
 import { matchesVariant } from '../components/ProductPicker.tsx';
-import { Empty, ErrorBox, SearchInput, SkeletonList } from '../components/ui.tsx';
+import { Empty, ErrorBox, SearchInput, SkeletonList, Thumb } from '../components/ui.tsx';
 import { num, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
 import { useShop } from '../shop.tsx';
@@ -52,7 +52,7 @@ export function ProductsPage() {
         <ErrorBox error={state.error} onRetry={state.reload} />
       ) : products.length === 0 ? (
         uzumLinked ? (
-          <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>
+          <Empty title="Hali mahsulot yo'q">Uzumdagi mahsulotlaringiz bir necha daqiqada o'zi chiqadi.</Empty>
         ) : (
           <Empty
             title={showArchived ? "Mahsulot yo'q" : "Hali mahsulot yo'q"}
@@ -148,15 +148,18 @@ function ProductCard({
           </button>
         )}
         <Link to={`/mahsulotlar/${p.id}`} className={`row row--link product-row${single ? ' product-row--single' : ''}`}>
-          <span className="row__main">
-            <span className="row__title">
-              {p.name}
-              {p.archived && <span className="badge badge--muted">Arxivda</span>}
-            </span>
-            <span className="row__meta">
-              {single
-                ? [p.variants[0] && p.variants[0].attributes.length ? variantName(p.variants[0]) : null, p.variants[0]?.code].filter(Boolean).join(' · ') || ' '
-                : `${p.variants.length} ta SKU${lowCount ? ` · ${lowCount} tasi tugab qolmoqda` : ''}`}
+          <span className="row__lead">
+            <Thumb src={p.image} />
+            <span className="row__main">
+              <span className="row__title">
+                <span className="clamp-2">{p.name}</span>
+                {p.archived && <span className="badge badge--muted">Arxivda</span>}
+              </span>
+              <span className="row__meta">
+                {single
+                  ? (p.variants[0]?.attributes.length ? variantName(p.variants[0]) : '') || ' '
+                  : `${p.variants.length} ta SKU${lowCount ? ` · ${lowCount} tasi kam qoldi` : ''}`}
+              </span>
             </span>
           </span>
           <Numbers {...p.stock} low={p.low} />

@@ -10,7 +10,6 @@ import {
   needsLocation,
   previewMovement,
   todayIso,
-  TYPE_LABEL,
   type Location,
   type MovementType,
   type ProductWithStock,
@@ -22,10 +21,10 @@ import { Icon } from '../components/Icon.tsx';
 import { PageHeader } from '../components/Layout.tsx';
 import { matchesVariant } from '../components/ProductPicker.tsx';
 import { useToast } from '../components/Toast.tsx';
-import { Empty, ErrorBox, SearchInput, SkeletonList } from '../components/ui.tsx';
+import { Empty, ErrorBox, SearchInput, SkeletonList, Thumb } from '../components/ui.tsx';
 import { num, signed, variantName } from '../format.ts';
 import { useAsync } from '../hooks.ts';
-import { entryPath, typeFromSlug } from '../movementUi.ts';
+import { ACTION_LABEL, entryPath, typeFromSlug } from '../movementUi.ts';
 import { useShop } from '../shop.tsx';
 
 export function EntryPage() {
@@ -78,7 +77,7 @@ function Entry({ type }: { type: MovementType }) {
 
   return (
     <div className="page page--entry">
-      <PageHeader title={TYPE_LABEL[type]} back={goBack} />
+      <PageHeader title={ACTION_LABEL[type]} back={goBack} />
       {products.loading && !products.data ? (
         <SkeletonList />
       ) : products.error ? (
@@ -129,7 +128,7 @@ function CardPicker({
   const createHref = `/mahsulotlar/yangi?keyin=${encodeURIComponent(createNext)}${query ? `&nom=${encodeURIComponent(query)}` : ''}`;
 
   if (sorted.length === 0) {
-    if (uzumLinked) return <Empty title="Hali mahsulot yo'q">Uzumdagi kartochkalaringiz SKU'lari bilan o'zi qo'shiladi — bir necha daqiqa kuting yoki Uzum sahifasida "Hozir yangilash"ni bosing.</Empty>;
+    if (uzumLinked) return <Empty title="Hali mahsulot yo'q">Uzumdagi mahsulotlaringiz bir necha daqiqada o'zi chiqadi.</Empty>;
     return (
       <Empty
         title="Hali mahsulot yo'q"
@@ -170,14 +169,17 @@ function CardPicker({
             return (
               <li key={p.id}>
                 <button type="button" className="row row--button" onClick={() => onPick(p, exact?.id)}>
+                  <Thumb src={p.image} />
                   <span className="row__main">
-                    <span className="row__title">{p.name}</span>
+                    <span className="row__title">
+                      <span className="clamp-2">{p.name}</span>
+                    </span>
                     <span className="row__meta">
                       {exact
-                        ? `${variantName(exact)} · ${exact.code}`
+                        ? variantName(exact)
                         : active.length > 1
                           ? `${active.length} ta SKU`
-                          : [active[0]?.attributes.length ? variantName(active[0]) : null, active[0]?.code].filter(Boolean).join(' · ') || ' '}
+                          : (active[0]?.attributes.length ? variantName(active[0]) : '') || ' '}
                     </span>
                   </span>
                   <span className="row__stock">
@@ -296,8 +298,9 @@ function BatchForm({
     <form className="entry" onSubmit={submit} noValidate>
       <div className="entry__body">
         <button type="button" className="picked" onClick={onChangeProduct}>
+          <Thumb src={product.image} />
           <span className="picked__text">
-            <span className="picked__name">{product.name}</span>
+            <span className="picked__name clamp-2">{product.name}</span>
             <span className="picked__variant">{variants.length > 1 ? `${variants.length} ta SKU` : variants[0]?.code ?? ''}</span>
           </span>
           <span className="picked__change">O'zgartirish</span>

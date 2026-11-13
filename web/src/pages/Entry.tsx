@@ -186,8 +186,13 @@ function CardPicker({
                     <span className="chip chip--own is-strong">
                       Omborda <b>{num(p.stock.own)}</b>
                     </span>
+                    {p.transit > 0 && (
+                      <span className="chip chip--transit">
+                        Yetkazishda <b>{num(p.transit)}</b>
+                      </span>
+                    )}
                     <span className="chip chip--uzum">
-                      Uzumda <b>{num(p.stock.uzum)}</b>
+                      Uzumda <b>{num(p.stock.uzum - p.transit)}</b>
                     </span>
                   </span>
                   <Icon name="chevron" size={18} className="row__chevron" />
@@ -333,8 +338,11 @@ function BatchForm({
               return (
                 <li key={v.id} className={`batch-row${r.kind === 'error' ? ' is-error' : ''}${r.kind === 'ok' ? ' is-filled' : ''}`}>
                   <label htmlFor={id} className="batch-row__label">
-                    <span className="batch-row__name">{variants.length > 1 || v.attributes.length ? variantName(v) : product.name}</span>
-                    {v.code && <span className="batch-row__code">{v.code}</span>}
+                    <Thumb src={v.image} />
+                    <span className="batch-row__text">
+                      <span className="batch-row__name clamp-2">{variants.length > 1 || v.attributes.length ? variantName(v) : product.name}</span>
+                      {v.code && <span className="batch-row__code">{v.code}</span>}
+                    </span>
                   </label>
                   <span className="batch-row__now">{num(v.stock[viewLoc])}</span>
                   <input

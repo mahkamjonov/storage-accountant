@@ -23,7 +23,7 @@ export function HomePage() {
             {overview.error ? (
               <ErrorBox error={overview.error} onRetry={overview.reload} />
             ) : data ? (
-              <StockFigures stock={data.totals} size="lg" />
+              <StockFigures stock={data.totals} transit={uzumLinked ? data.transit : undefined} size="lg" />
             ) : (
               <div className="figures figures--lg is-loading" aria-label="Yuklanmoqda" />
             )}
@@ -58,10 +58,10 @@ export function HomePage() {
                   Kam qolganlar
                 </h2>
                 <ul className="list" role="list">
-                  {data.low.map(({ productId, productName, productImage, variant: v }) => (
+                  {data.low.map(({ productId, productName, variant: v }) => (
                     <li key={v.id}>
                       <Link to={`/mahsulotlar/${productId}`} className="row row--link">
-                        <Thumb src={productImage} />
+                        <Thumb src={v.image} />
                         <span className="row__main">
                           <span className="row__title">
                             <span className="clamp-2">{productName}</span>
@@ -72,8 +72,13 @@ export function HomePage() {
                           <span className="chip chip--own is-strong">
                             Omborda <b>{num(v.stock.own)}</b>
                           </span>
+                          {v.transit > 0 && (
+                            <span className="chip chip--transit">
+                              Yetkazishda <b>{num(v.transit)}</b>
+                            </span>
+                          )}
                           <span className="chip chip--uzum">
-                            Uzumda <b>{num(v.stock.uzum)}</b>
+                            Uzumda <b>{num(v.stock.uzum - v.transit)}</b>
                           </span>
                         </span>
                       </Link>

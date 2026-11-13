@@ -30,6 +30,8 @@
   --color-overlay: oklch(20% 0.02 265 / 0.45);
   --color-skeleton: oklch(92% 0.008 90);
 
+  /* Raqamlar va mahsulot nomlari uchun — o'qishga oson, raqamlari bir xil kenglikda. */
+  --font-data: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-body: 'Golos Text Variable', 'Golos Text', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --text-xs: 0.8125rem;
@@ -2952,4 +2954,132 @@ body:has(.shell--focus) .toast-region {
 
 .product-hero__meta:empty {
   display: none;
+}
+
+/* ---------- Raqamlar va mahsulot nomlari: Inter ---------- */
+.row__title,
+.product-hero__name,
+.picked__name,
+.batch-row__name,
+.batch-row__now,
+.batch-row__input,
+.batch-row__result,
+.num-cell,
+.figure dd,
+.chip b,
+.move__product {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.row__title,
+.product-hero__name {
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.num-cell,
+.figure dd {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Yetkazishda ---------- */
+/* Telefonda 2×2: Omborda | Yetkazishda, Uzumda | Jami */
+.figures--4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm) var(--space-md);
+}
+
+.figures--4 .figure--total {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.figure--transit.is-active dd,
+.num-cell--transit.is-active {
+  color: var(--color-warn);
+}
+
+.chip--transit b {
+  color: var(--color-warn);
+}
+
+.product-row__nums--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.variant-detail .thumb {
+  align-self: flex-start;
+}
+
+.batch-row__label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.batch-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+@media (min-width: 600px) {
+  .figures--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .figures--4.figures--lg .figure dd {
+    font-size: var(--text-2xl);
+  }
+}
+
+@media (min-width: 720px) {
+  .table-head--4,
+  .product-row:has(.product-row__nums--4) {
+    grid-template-columns: minmax(0, 1fr) repeat(4, 104px);
+  }
+}
+
+/* Mahsulot sahifasidagi SKU qatori: rasm · nom · sonlar */
+.variant-detail {
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: var(--space-sm);
+}
+
+.variant-detail__nums {
+  grid-column: 1 / -1;
+}
+
+.variant-detail__nums:has(.num-cell--transit) {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (min-width: 600px) {
+  .variant-detail {
+    grid-template-columns: 48px minmax(0, 1fr) 260px;
+  }
+
+  .variant-detail:has(.num-cell--transit) {
+    grid-template-columns: 48px minmax(0, 1fr) 360px;
+  }
+
+  .variant-detail__nums {
+    grid-column: auto;
+  }
+}
+
+/* Uzun nomlar setkani kengaytirib yubormasin */
+.home-grid > *,
+.detail-grid > * {
+  min-width: 0;
+}
+
+.product-row__nums--4 small,
+.variant-detail__nums:has(.num-cell--transit) small {
+  font-size: 0.6875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

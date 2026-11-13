@@ -77,6 +77,7 @@ export interface LowStockItem {
 
 export interface Overview {
   totals: Stock;
+  transit: number;
   productCount: number;
   variantCount: number;
   low: LowStockItem[];

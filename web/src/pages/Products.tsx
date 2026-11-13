@@ -1,7 +1,7 @@
 // Mahsulotlar: kartochkalar (Uzumdagi kabi), bosilganda ichidagi variantlar ochiladi.
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { ProductWithStock } from '../../../domain/index.ts';
+import type { ProductWithStock, Stock } from '../../../domain/index.ts';
 import { api } from '../api.ts';
 import { Icon } from '../components/Icon.tsx';
 import { PageHeader } from '../components/Layout.tsx';
@@ -13,10 +13,9 @@ import { useShop } from '../shop.tsx';
 
 export function ProductsPage() {
   const { uzumLinked } = useShop();
-  const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const state = useAsync(() => api.products(showArchived), [showArchived]);
+  const state = useAsync(() => api.products(), []);
   const products = state.data?.products ?? [];
   const visible = products.filter((p) => matchesVariant(p, null, query));
 
@@ -55,7 +54,7 @@ export function ProductsPage() {
           <Empty title="Hali mahsulot yo'q">Uzumdagi mahsulotlaringiz bir necha daqiqada o'zi chiqadi.</Empty>
         ) : (
           <Empty
-            title={showArchived ? "Mahsulot yo'q" : "Hali mahsulot yo'q"}
+            title="Hali mahsulot yo'q"
             action={
               <Link to="/mahsulotlar/yangi" className="btn btn--primary">
                 <Icon name="plus" size={20} />
@@ -70,9 +69,10 @@ export function ProductsPage() {
         <Empty title={`"${query}" topilmadi`}>Boshqacha yozib ko'ring.</Empty>
       ) : (
         <>
-          <div className="table-head" aria-hidden="true">
+          <div className={`table-head${uzumLinked ? ' table-head--4' : ''}`} aria-hidden="true">
             <span>Mahsulot</span>
             <span>Omborda</span>
+            {uzumLinked && <span>Yetkazishda</span>}
             <span>Uzumda</span>
             <span>Jami</span>
           </div>
@@ -84,35 +84,38 @@ export function ProductsPage() {
                 // Qidiruvda variant topilsa, kartochka ochiq ko'rinadi.
                 open={open.has(p.id) || (query.trim() !== '' && p.variants.length > 1)}
                 query={query}
+                transit={uzumLinked}
                 onToggle={() => toggle(p.id)}
               />
             ))}
           </ul>
         </>
       )}
-
-      <label className="toggle">
-        <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-        <span>Arxivdagilarni ham ko'rsatish</span>
-      </label>
     </div>
   );
 }
 
-function Numbers({ own, uzum, total, low }: { own: number; uzum: number; total: number; low?: boolean }) {
+/** `transit` — Uzum do'konida "Yetkazishda" ustuni; "Uzumda" esa sotuvdagisi. */
+function Numbers({ stock, transit, low }: { stock: Stock; transit: number | null; low?: boolean }) {
   return (
-    <span className="product-row__nums">
+    <span className={`product-row__nums${transit !== null ? ' product-row__nums--4' : ''}`}>
       <span className="num-cell num-cell--own">
         <small>Omborda</small>
-        {num(own)}
+        {num(stock.own)}
       </span>
+      {transit !== null && (
+        <span className={`num-cell num-cell--transit${transit > 0 ? ' is-active' : ''}`}>
+          <small>Yetkazishda</small>
+          {num(transit)}
+        </span>
+      )}
       <span className="num-cell num-cell--uzum">
         <small>Uzumda</small>
-        {num(uzum)}
+        {num(stock.uzum - (transit ?? 0))}
       </span>
       <span className={`num-cell num-cell--total${low ? ' is-low' : ''}`}>
         <small>Jami</small>
-        {num(total)}
+        {num(stock.total)}
       </span>
     </span>
   );
@@ -122,11 +125,13 @@ function ProductCard({
   product: p,
   open,
   query,
+  transit,
   onToggle,
 }: {
   product: ProductWithStock;
   open: boolean;
   query: string;
+  transit: boolean;
   onToggle: () => void;
 }) {
   const single = p.variants.length <= 1;
@@ -162,7 +167,7 @@ function ProductCard({
               </span>
             </span>
           </span>
-          <Numbers {...p.stock} low={p.low} />
+          <Numbers stock={p.stock} transit={transit ? p.transit : null} low={p.low} />
         </Link>
       </div>
       {open && !single && (
@@ -170,11 +175,16 @@ function ProductCard({
           {variants.map((v) => (
             <li key={v.id}>
               <Link to={`/mahsulotlar/${p.id}`} className={`row row--link product-row variant-row${v.archived ? ' is-archived' : ''}`}>
-                <span className="row__main">
-                  <span className="row__title">{variantName(v)}</span>
-                  {v.code && <span className="row__meta">{v.code}</span>}
+                <span className="row__lead">
+                  <Thumb src={v.image} />
+                  <span className="row__main">
+                    <span className="row__title">
+                      <span className="clamp-2">{variantName(v)}</span>
+                    </span>
+                    {v.code && <span className="row__meta">{v.code}</span>}
+                  </span>
                 </span>
-                <Numbers {...v.stock} low={v.low} />
+                <Numbers stock={v.stock} transit={transit ? v.transit : null} low={v.low} />
               </Link>
             </li>
           ))}

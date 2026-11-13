@@ -60,17 +60,27 @@ export function Empty({ title, children, action }: { title: string; children?: R
   );
 }
 
-/** Omborimda / Uzumda / Jami */
-export function StockFigures({ stock, size = 'md' }: { stock: Stock; size?: 'md' | 'lg' }) {
+/**
+ * Omborda / Yetkazishda / Uzumda / Jami. `transit` berilsa (Uzum do'koni) — "Yetkazishda" ham ko'rsatiladi,
+ * "Uzumda" esa faqat sotuvdagisi bo'ladi.
+ */
+export function StockFigures({ stock, transit, size = 'md' }: { stock: Stock; transit?: number; size?: 'md' | 'lg' }) {
+  const withTransit = transit !== undefined;
   return (
-    <dl className={`figures figures--${size}`}>
+    <dl className={`figures figures--${size}${withTransit ? ' figures--4' : ''}`}>
       <div className="figure figure--own">
-        <dt>Omborimda</dt>
+        <dt>Omborda</dt>
         <dd>{num(stock.own)}</dd>
       </div>
+      {withTransit && (
+        <div className={`figure figure--transit${transit > 0 ? ' is-active' : ''}`}>
+          <dt>Yetkazishda</dt>
+          <dd>{num(transit)}</dd>
+        </div>
+      )}
       <div className="figure figure--uzum">
         <dt>Uzumda</dt>
-        <dd>{num(stock.uzum)}</dd>
+        <dd>{num(stock.uzum - (transit ?? 0))}</dd>
       </div>
       <div className="figure figure--total">
         <dt>Jami</dt>

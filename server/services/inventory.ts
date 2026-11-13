@@ -206,13 +206,23 @@ export class InventoryService {
 
   // ---------- O'qish ----------
 
-  private async assemble(products: Product[], includeArchivedVariants: boolean, shopId?: string): Promise<ProductWithStock[]> {
+  /**
+   * `hideUzumArchived` — Uzumda arxivga olingan SKU'lar ko'rsatilmaydi; barcha SKU'lari arxivda bo'lgan kartochka ham.
+   * (Bazadan hech narsa o'chirilmaydi — faqat ro'yxatda ko'rinmaydi.)
+   */
+  private async assemble(
+    products: Product[],
+    includeArchivedVariants: boolean,
+    shopId?: string,
+    hideUzumArchived = false,
+  ): Promise<ProductWithStock[]> {
     const [variants, uzumSkus] = await Promise.all([
       this.repo.listVariants({ includeArchived: includeArchivedVariants, shopId }),
       this.repo.listUzumSkus(),
     ]);
     const movements = await this.repo.listMovements({ variantIds: variants.map((v) => v.id) });
     const uzumQty = new Map(uzumSkus.map((s) => [s.skuId, s.quantityActive]));
+    const uzumArchived = new Set(uzumSkus.filter((s) => s.archived).map((s) => s.skuId));
     // Kartochka rasmi: Uzum kartochkasi bo'yicha, bo'lmasa bog'langan SKU'lardan birinchisi.
     const imageByUzumProduct = new Map<number, string>();
     const imageBySku = new Map<number, string>();
@@ -235,18 +245,30 @@ export class InventoryService {
       else variantsByProduct.set(v.productId, [v]);
     }
 
-    return products.map((p) => {
-      const vs: VariantWithStock[] = (variantsByProduct.get(p.id) ?? []).map((v) => {
+    const result: ProductWithStock[] = [];
+    for (const p of products) {
+      const all = variantsByProduct.get(p.id) ?? [];
+      const shown = hideUzumArchived ? all.filter((v) => v.uzumSkuId === null || !uzumArchived.has(v.uzumSkuId)) : all;
+      if (shown.length === 0 && all.length > 0) continue;
+      const productImage =
+        (p.uzumProductId != null ? imageByUzumProduct.get(p.uzumProductId) : undefined) ??
+        all.map((v) => (v.uzumSkuId !== null ? imageBySku.get(v.uzumSkuId) : undefined)).find(Boolean) ??
+        null;
+      const vs: VariantWithStock[] = shown.map((v) => {
         const moves = movesByVariant.get(v.id) ?? [];
         const stock = computeStock(moves);
         const lastMovementAt = latest(moves);
+        const uzumReported = v.uzumSkuId !== null ? (uzumQty.get(v.uzumSkuId) ?? null) : null;
         return {
           ...v,
           stock,
           // Hali hech qachon kelmagan variant "tugab qolmoqda" emas — u shunchaki hali yo'q.
           low: !v.archived && lastMovementAt !== null && isLowStock(stock, p.lowStockThreshold),
           lastMovementAt,
-          uzumReported: v.uzumSkuId !== null ? (uzumQty.get(v.uzumSkuId) ?? null) : null,
+          uzumReported,
+          // Uzum sotuvda deb ko'rsatgandan ortig'i hali yo'lda yoki qabul qilinmoqda.
+          transit: uzumReported !== null ? Math.max(0, stock.uzum - Math.max(0, uzumReported)) : 0,
+          image: (v.uzumSkuId !== null ? imageBySku.get(v.uzumSkuId) : undefined) ?? productImage,
         };
       });
       const active = vs.filter((v) => !v.archived);
@@ -254,18 +276,17 @@ export class InventoryService {
         (at, v) => (v.lastMovementAt && (!at || v.lastMovementAt > at) ? v.lastMovementAt : at),
         null,
       );
-      return {
+      result.push({
         ...p,
         variants: vs,
         stock: active.length ? sumStocks(active.map((v) => v.stock)) : EMPTY_STOCK,
         low: active.some((v) => v.low),
         lastMovementAt,
-        image:
-          (p.uzumProductId != null ? imageByUzumProduct.get(p.uzumProductId) : undefined) ??
-          vs.map((v) => (v.uzumSkuId !== null ? imageBySku.get(v.uzumSkuId) : undefined)).find(Boolean) ??
-          null,
-      };
-    });
+        image: productImage,
+        transit: active.reduce((n, v) => n + v.transit, 0),
+      });
+    }
+    return result;
   }
 
   // ---------- Do'konlar ----------
@@ -301,7 +322,7 @@ export class InventoryService {
 
   async listProducts(shopId: string, opts: { includeArchived?: boolean } = {}): Promise<ProductWithStock[]> {
     const products = await this.repo.listProducts({ includeArchived: opts.includeArchived, shopId });
-    return this.assemble(products, false, shopId);
+    return this.assemble(products, false, shopId, !opts.includeArchived);
   }
 
   async getProduct(id: string): Promise<ProductWithStock> {
@@ -310,7 +331,7 @@ export class InventoryService {
     return (await this.assemble([product], true, product.shopId))[0]!;
   }
 
-  async overview(shopId: string): Promise<{ totals: Stock; productCount: number; variantCount: number; low: LowStockItem[] }> {
+  async overview(shopId: string): Promise<{ totals: Stock; transit: number; productCount: number; variantCount: number; low: LowStockItem[] }> {
     const products = await this.listProducts(shopId);
     const low: LowStockItem[] = [];
     for (const p of products) {
@@ -319,6 +340,7 @@ export class InventoryService {
     low.sort((a, b) => a.variant.stock.total - b.variant.stock.total);
     return {
       totals: products.length ? sumStocks(products.map((p) => p.stock)) : EMPTY_STOCK,
+      transit: products.reduce((n, p) => n + p.transit, 0),
       productCount: products.length,
       variantCount: products.reduce((n, p) => n + p.variants.length, 0),
       low,

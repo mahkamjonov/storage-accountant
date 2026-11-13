@@ -78,7 +78,7 @@ export function ProductDetailPage() {
       <div className="detail-grid">
         <div className="detail-grid__side">
           <section className="card">
-            <StockFigures stock={p.stock} size="lg" />
+            <StockFigures stock={p.stock} transit={uzumLinked ? p.transit : undefined} size="lg" />
           </section>
 
           {!p.archived && active.length > 0 && (
@@ -103,13 +103,13 @@ export function ProductDetailPage() {
               </h2>
               <ul className="list" role="list">
                 {p.variants.map((v) => (
-                  <VariantRow key={v.id} variant={v} onReconcile={() => setReconcile(v)} />
+                  <VariantRow key={v.id} variant={v} transit={uzumLinked} onReconcile={() => setReconcile(v)} />
                 ))}
               </ul>
             </section>
           ) : (
             single.uzumReported !== null &&
-            single.uzumReported !== single.stock.uzum && <UzumMismatch variant={single} onReconcile={() => setReconcile(single)} />
+            single.uzumReported > single.stock.uzum && <UzumMismatch variant={single} onReconcile={() => setReconcile(single)} />
           )}
 
           <section aria-labelledby="history-title">
@@ -183,13 +183,15 @@ function UzumMismatch({ variant: v, onReconcile }: { variant: VariantWithStock; 
   );
 }
 
-function VariantRow({ variant: v, onReconcile }: { variant: VariantWithStock; onReconcile: () => void }) {
-  const mismatch = !v.archived && v.uzumReported !== null && v.uzumReported !== v.stock.uzum;
+function VariantRow({ variant: v, transit, onReconcile }: { variant: VariantWithStock; transit: boolean; onReconcile: () => void }) {
+  // Uzumda ilovadagidan ko'p bo'lsa — tuzatish taklif qilinadi. Kam bo'lsa — bu "Yetkazishda".
+  const mismatch = !v.archived && v.uzumReported !== null && v.uzumReported > v.stock.uzum;
   return (
     <li className={`variant-detail${v.archived ? ' is-archived' : ''}`}>
+      <Thumb src={v.image} />
       <div className="variant-detail__main">
         <span className="row__title">
-          {variantName(v)}
+          <span className="clamp-2">{variantName(v)}</span>
           {v.low && (
             <span className={`badge ${v.stock.total === 0 ? 'badge--danger' : 'badge--warn'}`}>{v.stock.total === 0 ? 'Tugadi' : 'Kam qoldi'}</span>
           )}
@@ -210,9 +212,15 @@ function VariantRow({ variant: v, onReconcile }: { variant: VariantWithStock; on
           <small>Omborda</small>
           {num(v.stock.own)}
         </span>
+        {transit && (
+          <span className={`num-cell num-cell--transit${v.transit > 0 ? ' is-active' : ''}`}>
+            <small>Yetkazishda</small>
+            {num(v.transit)}
+          </span>
+        )}
         <span className="num-cell num-cell--uzum">
           <small>Uzumda</small>
-          {num(v.stock.uzum)}
+          {num(v.stock.uzum - (transit ? v.transit : 0))}
         </span>
         <span className={`num-cell${v.low ? ' is-low' : ''}`}>
           <small>Jami</small>

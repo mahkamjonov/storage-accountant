@@ -3,7 +3,8 @@
 Uzum Market sotuvchisi uchun ombor hisobi. Har bir harakat alohida yozuv bo'lib saqlanadi, qoldiqni esa ilova o'zi hisoblaydi. Qoldiq hech qachon qo'lda tahrirlanmaydi va bazada alohida saqlanmaydi.
 
 - **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Kerak bo'lsa, mahsulot sahifasida "Sanab tuzatish" bor.
-- **Bosh sahifa sodda**: jami qoldiq (omborda / Uzumda), "Omborga qo'shish" tugmasi va kam qolgan mahsulotlar. Mahsulotlar Uzumdagi asosiy rasmi bilan, uzun nomlar 2 qatorgacha qisqartiriladi.
+- **Bosh sahifa sodda**: jami qoldiq (omborda / Uzumda), "Omborga qo'shish" tugmasi va kam qolgan mahsulotlar. Har bir SKU Uzumdagi o'z rasmi bilan, uzun nomlar 2 qatorgacha qisqartiriladi. Uzumda arxivga olingan SKU va kartochkalar ro'yxatda ko'rinmaydi (bazadan o'chmaydi).
+- **Yetkazishda**: nakladnoy yozilgan, lekin Uzumda hali sotuvga chiqmagan son. Hisob: ilovadagi "Uzumda" − Uzum sotuvda deb ko'rsatgan son (`quantityActive`). Sotuvga chiqqach, "Uzumda"ga o'tadi. Jami = Omborda + Yetkazishda + Uzumda.
 - **Qolganini Uzum o'zi beradi**: Uzumga jo'natish (nakladnoy), sotuvlar (FBO — Uzum omboridan, **FBS — omborimdan**) va qaytarishlar avtomatik yoziladi.
 - **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon **Profil** sahifasida almashtiriladi.
 - **Mahsulot = kartochka, ichida SKU'lar** — xuddi Uzumdagidek: "Hoodie" kartochkasi, ichida Qora M, Qora L, Oq M ... Har bir SKU'ning o'z kodi va o'z qoldig'i bor.

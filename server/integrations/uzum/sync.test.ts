@@ -262,6 +262,46 @@ describe.each(adapters)('Uzum sinxronlash (%s)', (_name, makeRepo) => {
     expect((await stock())['HOODIE-QORA']!.own).toBe(100);
   });
 
+  it("nakladnoy yozilgan, lekin Uzumda hali sotuvga chiqmagan son — Yetkazishda", async () => {
+    const { uzum, fake, inventory, shop } = await setup();
+    fake.cards.push(card(800, 'Parda', [{ skuId: 41, code: 'PARDA-1', qty: 2 }]));
+    await uzum.sync(); // import: Uzumda 2 ta sotuvda
+    const parda = () => inventory.listProducts(shop.id).then((ps) => ps.find((p) => p.uzumProductId === 800)!);
+    await inventory.recordMovement({ variantId: (await parda()).variants[0]!.id, type: 'received', quantity: 10 });
+
+    fake.invoices = [invoice(5, [{ skuId: 41, qty: 4 }])];
+    await uzum.sync(); // nakladnoy: omborimdan 4 ta chiqdi, Uzum hali qabul qilmagan
+    let v = (await parda()).variants[0]!;
+    expect(v.stock).toEqual({ own: 6, uzum: 6, total: 12 });
+    expect(v.transit).toBe(4);
+
+    fake.cards[fake.cards.length - 1]!.skuList![0]!.quantityActive = 6; // Uzum qabul qildi, sotuvga chiqdi
+    await uzum.sync();
+    v = (await parda()).variants[0]!;
+    expect(v.transit).toBe(0);
+    expect((await parda()).transit).toBe(0);
+  });
+
+  it("Uzumda arxivga olingan SKU va kartochka ro'yxatda ko'rinmaydi (bazadan o'chmaydi)", async () => {
+    const { uzum, fake, inventory, shop } = await setup();
+    const c = card(900, 'Eski parda', [
+      { skuId: 51, code: 'ESKI-1', chars: 'Qora', qty: 0 },
+      { skuId: 52, code: 'ESKI-2', chars: 'Oq', qty: 1 },
+    ]);
+    fake.cards.push(c);
+    await uzum.sync(); // ikkalasi ham import qilinadi
+    c.skuList![0]!.archived = true; // keyin Uzumda biri arxivga olindi
+    await uzum.sync();
+    const listed = (await inventory.listProducts(shop.id)).find((p) => p.uzumProductId === 900)!;
+    expect(listed.variants.map((v) => v.code)).toEqual(['ESKI-2']);
+
+    c.skuList![1]!.archived = true;
+    await uzum.sync();
+    expect((await inventory.listProducts(shop.id)).find((p) => p.uzumProductId === 900)).toBeUndefined();
+    const all = (await inventory.listProducts(shop.id, { includeArchived: true })).find((p) => p.uzumProductId === 900)!;
+    expect(all.variants).toHaveLength(2);
+  });
+
   it("do'kon ulanganda Uzum katalogi o'zi import qilinadi: kartochka, SKU'lar va Uzumdagi qoldiq", async () => {
     const { uzum, fake, inventory, shop } = await setup();
     fake.cards.push(

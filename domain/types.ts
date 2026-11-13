@@ -118,6 +118,13 @@ export interface VariantWithStock extends Variant {
   lastMovementAt: string | null;
   /** Uzum ma'lumoti bo'yicha Uzum omboridagi son (oxirgi yangilashda). */
   uzumReported: number | null;
+  /**
+   * Yetkazishda: Uzumga jo'natilgan (nakladnoy yozilgan), lekin hali sotuvga chiqmagan son.
+   * `stock.uzum` ichiga kiradi; sotuvdagisi = stock.uzum - transit.
+   */
+  transit: number;
+  /** SKU'ning Uzumdagi rasmi (bo'lmasa — kartochka rasmi). */
+  image: string | null;
 }
 
 /** Kartochka, uning variantlari va hisoblangan qoldig'i (API javobi). */
@@ -130,4 +137,6 @@ export interface ProductWithStock extends Product {
   lastMovementAt: string | null;
   /** Uzumdagi asosiy rasm (kichik o'lchamda); Uzumga bog'lanmagan bo'lsa — null. */
   image: string | null;
+  /** Variantlardagi "Yetkazishda" yig'indisi. */
+  transit: number;
 }

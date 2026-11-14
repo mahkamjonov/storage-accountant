@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { MovementType, VariantWithStock } from '../../../domain/index.ts';
 import { api } from '../api.ts';
@@ -21,10 +21,14 @@ export function ProductDetailPage() {
   const history = useAsync(() => api.movements({ productId: id, limit: historyLimit }), [id, historyLimit]);
   const [reconcile, setReconcile] = useState<VariantWithStock | null>(null);
   const toast = useToast();
-  const { uzumLinked } = useShop();
+  const { uzumLinked, shop, select } = useShop();
   const p = product.data?.product;
   const lookup = useMemo(() => variantLookup(p ? [p] : []), [p]);
   const here = `/mahsulotlar/${id}`;
+  // "Barcha do'konlar" ro'yxatidan boshqa do'kon mahsuloti ochilsa — o'sha do'konga o'tamiz (tarix va Uzum holati shu do'kondan).
+  useEffect(() => {
+    if (p && shop && p.shopId !== shop.id) select(p.shopId);
+  }, [p, shop, select]);
 
   if (product.loading && !p) {
     return (

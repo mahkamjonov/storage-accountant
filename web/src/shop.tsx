@@ -5,6 +5,24 @@ import { api, dataChanged, setCurrentShopId } from './api.ts';
 import { useSession } from './session.tsx';
 
 const STORAGE_KEY = 'ombor.shop';
+/** Mahsulotlar ro'yxati: bitta do'kon yoki barcha do'konlar birga. */
+const SCOPE_KEY = 'ombor.allShops';
+
+function readAll(): boolean {
+  try {
+    return localStorage.getItem(SCOPE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeAll(all: boolean) {
+  try {
+    localStorage.setItem(SCOPE_KEY, all ? '1' : '0');
+  } catch {
+    // xotira yopiq bo'lsa ham ishlayveradi
+  }
+}
 
 function readStored(): string | null {
   try {
@@ -28,6 +46,9 @@ interface ShopValue {
   /** Uzum bilan bog'langan do'kon: jo'natish, sotuv, qaytarish avtomatik keladi. */
   uzumLinked: boolean;
   select: (id: string) => void;
+  /** Mahsulotlar ro'yxatida barcha do'konlar birga ko'rsatiladimi. */
+  allShops: boolean;
+  setAllShops: (all: boolean) => void;
   reload: () => void;
 }
 
@@ -38,6 +59,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [shops, setShops] = useState<ShopWithStats[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(() => readStored());
   const [ready, setReady] = useState(false);
+  const [allShops, setAllShopsState] = useState(() => readAll());
   const [tick, setTick] = useState(0);
 
   // Avval saqlangan do'kon bilan so'rovlar boshlanadi — sahifalar noto'g'ri do'konni yuklamasligi uchun.
@@ -81,10 +103,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     dataChanged.dispatchEvent(new Event('change'));
   }, []);
 
+  const setAllShops = useCallback((all: boolean) => {
+    setAllShopsState(all);
+    writeAll(all);
+  }, []);
+
   const shop = shops.find((s) => s.id === currentId) ?? null;
   const value = useMemo(
-    () => ({ shops, shop, uzumLinked: shop?.uzumShopId != null, select, reload: () => setTick((t) => t + 1) }),
-    [shops, shop, select],
+    () => ({
+      shops,
+      shop,
+      uzumLinked: shop?.uzumShopId != null,
+      select,
+      allShops: allShops && shops.length > 1,
+      setAllShops,
+      reload: () => setTick((t) => t + 1),
+    }),
+    [shops, shop, select, allShops, setAllShops],
   );
 
   if (user && !ready) return null;

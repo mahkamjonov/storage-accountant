@@ -53,10 +53,12 @@ function Entry({ type }: { type: MovementType }) {
   const [params, setParams] = useSearchParams();
   const cardId = params.get('kartochka');
   const variantId = params.get('variant');
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const from = (location.state as { from?: string } | null)?.from ?? '/mahsulotlar';
   const pickedHere = (location.state as { picked?: boolean } | null)?.picked === true;
 
-  const products = useAsync(() => api.products(), []);
+  const { allShops, shop, select } = useShop();
+  // "Barcha do'konlar" tanlangan bo'lsa — hamma do'kon mahsulotlaridan tanlanadi.
+  const products = useAsync(() => api.products({ all: allShops }), [allShops]);
   const all = products.data?.products ?? [];
   const product = useMemo(
     () => all.find((p) => p.id === cardId) ?? (variantId ? all.find((p) => p.variants.some((v) => v.id === variantId)) : undefined) ?? null,
@@ -64,6 +66,7 @@ function Entry({ type }: { type: MovementType }) {
   );
 
   function pick(p: ProductWithStock, focusVariant?: string) {
+    if (shop && p.shopId !== shop.id) select(p.shopId);
     const next = new URLSearchParams();
     next.set('kartochka', p.id);
     if (focusVariant) next.set('variant', focusVariant);
@@ -118,7 +121,8 @@ function CardPicker({
   onPick: (p: ProductWithStock, focusVariant?: string) => void;
   createNext: string;
 }) {
-  const { uzumLinked } = useShop();
+  const { uzumLinked, allShops, shops } = useShop();
+  const shopName = useMemo(() => new Map(shops.map((s) => [s.id, s.name])), [shops]);
   const [query, setQuery] = useState('');
   const sorted = useMemo(
     () => products.filter((p) => p.variants.some((v) => !v.archived)).sort((a, b) => recent(a.lastMovementAt, b.lastMovementAt) || a.name.localeCompare(b.name)),
@@ -175,11 +179,18 @@ function CardPicker({
                       <span className="clamp-2">{p.name}</span>
                     </span>
                     <span className="row__meta">
-                      {exact
-                        ? variantName(exact)
-                        : active.length > 1
-                          ? `${active.length} ta SKU`
-                          : (active[0]?.attributes.length ? variantName(active[0]) : '') || ' '}
+                      {[
+                        allShops ? shopName.get(p.shopId) : null,
+                        exact
+                          ? variantName(exact)
+                          : active.length > 1
+                            ? `${active.length} ta SKU`
+                            : active[0]?.attributes.length
+                              ? variantName(active[0])
+                              : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || ' '}
                     </span>
                   </span>
                   <span className="row__stock">

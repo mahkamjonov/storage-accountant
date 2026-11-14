@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { Icon, type IconName } from './Icon.tsx';
 
 const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
-  { to: '/', label: 'Bosh sahifa', icon: 'home', end: true },
   { to: '/mahsulotlar', label: 'Mahsulotlar', icon: 'box' },
   { to: '/profil', label: 'Profil', icon: 'user' },
 ];
@@ -75,7 +74,7 @@ export function PageHeader({
       )}
       <div className="page-header__text">
         <h1 className="page-header__title">{title}</h1>
-        {subtitle && <p className="page-header__sub">{subtitle}</p>}
+        {subtitle && <div className="page-header__sub">{subtitle}</div>}
       </div>
       {actions && <div className="page-header__actions">{actions}</div>}
     </header>

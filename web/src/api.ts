@@ -152,8 +152,7 @@ export const api = {
 
   overview: () => request<Overview>('GET', '/overview'),
 
-  products: (includeArchived = false) =>
-    request<{ products: ProductWithStock[] }>('GET', `/products${includeArchived ? '?archived=1' : ''}`),
+  products: (opts: { all?: boolean } = {}) => request<{ products: ProductWithStock[] }>('GET', `/products${opts.all ? '?all=1' : ''}`),
   product: (productId: string) => request<{ product: ProductWithStock }>('GET', `/products/${id(productId)}`),
   createProduct: (input: ProductForm & { variants: VariantForm[] }) =>
     request<{ product: ProductWithStock }>('POST', '/products', input),

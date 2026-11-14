@@ -152,6 +152,8 @@ export function createApp(deps: AppDeps) {
   // ---------- Mahsulotlar ----------
 
   app.get('/products', async (c) => {
+    // ?all=1 — barcha do'konlar mahsulotlari bitta ro'yxatda.
+    if (c.req.query('all') === '1') return c.json({ products: await inventory.listAllProducts() });
     const products = await inventory.listProducts(c.get('shop').id, { includeArchived: c.req.query('archived') === '1' });
     return c.json({ products });
   });

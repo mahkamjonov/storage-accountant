@@ -204,7 +204,7 @@ button {
   inset: auto 0 0 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background: var(--color-surface);
@@ -3258,4 +3258,133 @@ body:has(.shell--focus) .toast-region {
 
 .profile-logout:hover {
   background: var(--color-danger-soft);
+}
+
+/* ---------- Mahsulotlar: asosiy sahifa ---------- */
+.products-page {
+  gap: var(--space-sm);
+}
+
+.products-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.products-toolbar__search {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sarlavha ostidagi do'kon tanlagich: ixcham, matn ko'rinishida */
+.scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink-2);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.scope-btn:hover .scope-btn__name {
+  text-decoration: underline;
+}
+
+.scope-btn > svg:first-child {
+  color: var(--color-uzum);
+  flex: none;
+}
+
+.scope-btn__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-btn__chevron {
+  flex: none;
+  color: var(--color-ink-3);
+}
+
+.scope-group__title {
+  padding: var(--space-sm) var(--space-md) var(--space-2xs);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-3);
+}
+
+/* Toifalar: gorizontal, telefonda suriladi */
+.chips {
+  display: flex;
+  gap: var(--space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(-1 * var(--space-md));
+  padding: 2px var(--space-md);
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 36px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.chip-tab:hover {
+  background: var(--color-sunken);
+}
+
+.chip-tab.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.chip-tab__count {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-ink-3);
+}
+
+.chip-tab--low .chip-tab__count {
+  color: var(--color-warn);
+}
+
+.chip-tab--out .chip-tab__count {
+  color: var(--color-danger);
+}
+
+.chip-tab.is-active .chip-tab__count {
+  color: inherit;
+  opacity: 0.75;
+}
+
+@media (min-width: 960px) {
+  .chips {
+    margin: 0;
+    padding: 2px 0;
+  }
 }

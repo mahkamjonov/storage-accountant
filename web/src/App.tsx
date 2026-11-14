@@ -1,7 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Layout } from './components/Layout.tsx';
 import { Loading } from './components/ui.tsx';
-import { HomePage } from './pages/Home.tsx';
 import { LoginPage } from './pages/Login.tsx';
 import { EntryPage } from './pages/Entry.tsx';
 import { ProductDetailPage } from './pages/ProductDetail.tsx';
@@ -29,7 +28,8 @@ export function App() {
     <Routes>
       <Route path="/kirish" element={<LoginPage />} />
       <Route element={<RequireLogin />}>
-        <Route index element={<HomePage />} />
+        {/* Asosiy sahifa — mahsulotlar */}
+        <Route index element={<Navigate to="/mahsulotlar" replace />} />
         <Route path="kiritish/:slug" element={<EntryPage />} />
         <Route path="mahsulotlar" element={<ProductsPage />} />
         <Route path="mahsulotlar/yangi" element={<NewProductPage />} />
@@ -37,7 +37,7 @@ export function App() {
         <Route path="mahsulotlar/:id/tahrirlash" element={<EditProductPage />} />
         <Route path="profil" element={<ProfilePage />} />
         <Route path="uzum" element={<Navigate to="/profil" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/mahsulotlar" replace />} />
       </Route>
     </Routes>
   );

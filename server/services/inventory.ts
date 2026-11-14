@@ -327,6 +327,13 @@ export class InventoryService {
     return this.assemble(products, false, shopId, !opts.includeArchived);
   }
 
+  /** Barcha do'konlarning mahsulotlari (do'konlar tartibida). */
+  async listAllProducts(): Promise<ProductWithStock[]> {
+    const shops = await this.listShops();
+    const lists = await Promise.all(shops.map((s) => this.listProducts(s.id)));
+    return lists.flat();
+  }
+
   async getProduct(id: string): Promise<ProductWithStock> {
     const product = await this.repo.getProduct(id);
     if (!product) throw new AppError(404, 'PRODUCT_NOT_FOUND', "Mahsulot topilmadi. Ro'yxatdan qaytadan tanlang.");

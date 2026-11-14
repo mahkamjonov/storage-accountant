@@ -327,9 +327,11 @@ export class InventoryService {
     return this.assemble(products, false, shopId, !opts.includeArchived);
   }
 
-  /** Barcha do'konlarning mahsulotlari (do'konlar tartibida). */
+  /** Barcha do'konlarning mahsulotlari (do'konlar tartibida). Marketplace do'konlari bo'lsa — faqat ular. */
   async listAllProducts(): Promise<ProductWithStock[]> {
-    const shops = await this.listShops();
+    const all = await this.listShops();
+    const linked = all.filter((s) => s.uzumShopId != null);
+    const shops = linked.length ? linked : all;
     const lists = await Promise.all(shops.map((s) => this.listProducts(s.id)));
     return lists.flat();
   }

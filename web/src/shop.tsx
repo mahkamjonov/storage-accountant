@@ -71,8 +71,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     api.shops().then(
       (r) => {
         if (!alive) return;
-        setShops(r.shops);
-        const valid = r.shops.find((s) => s.id === currentId) ? currentId : r.current;
+        // Marketplace'ga ulangan do'konlar bo'lsa — faqat ular ko'rsatiladi ("Mening do'konim" kabi qo'lda ochilganlar yashiriladi,
+        // ma'lumoti o'chmaydi).
+        const linked = r.shops.filter((s) => s.uzumShopId != null);
+        const visible = linked.length ? linked : r.shops;
+        setShops(visible);
+        const valid = visible.find((s) => s.id === currentId) ? currentId : (visible.find((s) => s.id === r.current) ?? visible[0])?.id ?? null;
         if (valid !== currentId) {
           setCurrentShopId(valid);
           setCurrentId(valid);

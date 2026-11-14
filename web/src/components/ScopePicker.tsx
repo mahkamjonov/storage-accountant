@@ -1,17 +1,34 @@
-// Mahsulotlar ro'yxati qaysi do'kon(lar)dan: bitta do'kon yoki barchasi. Do'konlar marketplace bo'yicha guruhlanadi.
+// Mahsulotlar ro'yxati qaysi do'kon(lar)dan: bitta do'kon yoki barchasi.
+// Yuqorida marketplace logolari (gorizontal); bosilganda o'sha marketplace'dagi do'konlar chiqadi.
 import { useEffect, useRef, useState } from 'react';
 import type { ShopWithStats } from '../../../domain/index.ts';
 import { useShop } from '../shop.tsx';
 import { Icon } from './Icon.tsx';
 
-/** Hozircha bitta marketplace — Uzum. Ozon, Wildberries qo'shilsa, shu yerga guruh qo'shiladi. */
-function marketplaceOf(s: ShopWithStats): string {
-  return s.uzumShopId != null ? 'Uzum Market' : "O'z do'konlarim";
+interface Marketplace {
+  id: 'uzum' | 'ozon' | 'wildberries';
+  name: string;
+  /** Plitkadagi qisqa nom. */
+  short: string;
+  logo: string;
+  /** Hozircha faqat Uzum ulanadi; qolganlari — tez orada. */
+  shopsOf: (shops: ShopWithStats[]) => ShopWithStats[] | null;
+}
+
+export const MARKETPLACES: Marketplace[] = [
+  { id: 'uzum', name: 'Uzum Market', short: 'Uzum', logo: '/marketplaces/uzum.png', shopsOf: (shops) => shops.filter((s) => s.uzumShopId != null) },
+  { id: 'ozon', name: 'Ozon', short: 'Ozon', logo: '/marketplaces/ozon.png', shopsOf: () => null },
+  { id: 'wildberries', name: 'Wildberries', short: 'Wildberries', logo: '/marketplaces/wildberries.png', shopsOf: () => null },
+];
+
+export function marketplaceLogo(shop: ShopWithStats | null): string | null {
+  return shop?.uzumShopId != null ? MARKETPLACES[0]!.logo : null;
 }
 
 export function ScopePicker() {
   const { shops, shop, select, allShops, setAllShops } = useShop();
   const [open, setOpen] = useState(false);
+  const [market, setMarket] = useState<Marketplace['id']>('uzum');
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -21,13 +38,10 @@ export function ScopePicker() {
     if (!open && d.open) d.close();
   }, [open]);
 
-  if (!shop || shops.length <= 1) return null;
-
-  const groups = new Map<string, ShopWithStats[]>();
-  for (const s of shops) {
-    const key = marketplaceOf(s);
-    groups.set(key, [...(groups.get(key) ?? []), s]);
-  }
+  if (!shop) return null;
+  const logo = marketplaceLogo(shop);
+  const current = MARKETPLACES.find((m) => m.id === market)!;
+  const list = current.shopsOf(shops);
 
   function choose(id: string | null) {
     if (id === null) setAllShops(true);
@@ -41,7 +55,7 @@ export function ScopePicker() {
   return (
     <>
       <button type="button" className="scope-btn" onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <Icon name="store" size={16} />
+        {!allShops && logo ? <img src={logo} alt="" className="scope-btn__logo" /> : <Icon name="store" size={16} />}
         <span className="scope-btn__name">{allShops ? "Barcha do'konlar" : shop.name}</span>
         <Icon name="expand" size={14} className="scope-btn__chevron" />
       </button>
@@ -49,33 +63,49 @@ export function ScopePicker() {
       <dialog ref={ref} className="dialog shop-dialog" onClose={() => setOpen(false)} onCancel={() => setOpen(false)} aria-labelledby="scope-title">
         <div className="dialog__header">
           <h2 id="scope-title" className="dialog__title">
-            Qaysi do'kon?
+            Do'konni tanlang
           </h2>
           <button type="button" className="icon-btn" aria-label="Yopish" onClick={() => setOpen(false)}>
             <Icon name="close" />
           </button>
         </div>
-        <ul className="list" role="list">
-          <li>
-            <ScopeOption title="Barcha do'konlar" current={allShops} onClick={() => choose(null)} />
-          </li>
-        </ul>
-        {[...groups.entries()].map(([name, list]) => (
-          <section key={name} className="scope-group">
-            <h3 className="scope-group__title">{name}</h3>
-            <ul className="list" role="list">
-              {list.map((s) => (
-                <li key={s.id}>
-                  <ScopeOption
-                    title={s.name}
-                    current={!allShops && s.id === shop.id}
-                    onClick={() => choose(s.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+
+        <div className="markets" role="tablist" aria-label="Marketplace">
+          {MARKETPLACES.map((m) => {
+            const count = m.shopsOf(shops)?.length ?? 0;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={market === m.id}
+                className={`market${market === m.id ? ' is-active' : ''}${count ? '' : ' is-off'}`}
+                onClick={() => setMarket(m.id)}
+              >
+                <img src={m.logo} alt="" className="market__logo" />
+                <span className="market__name">{m.short}</span>
+                <span className="market__meta">{count ? `${count} ta do'kon` : 'Tez orada'}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {list && list.length > 0 ? (
+          <ul className="list scope-list" role="list">
+            {list.length > 1 && (
+              <li>
+                <ScopeOption title="Barcha do'konlar" current={allShops} onClick={() => choose(null)} />
+              </li>
+            )}
+            {list.map((s) => (
+              <li key={s.id}>
+                <ScopeOption title={s.name} current={!allShops && s.id === shop.id} onClick={() => choose(s.id)} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="scope-empty">{current.name} hali ulanmagan. Tez orada qo'shiladi.</p>
+        )}
       </dialog>
     </>
   );

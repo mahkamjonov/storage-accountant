@@ -68,8 +68,9 @@
   --shadow-float: 0 8px 28px oklch(20% 0.02 265 / 0.18);
 }
 
+/* Qorong'i rejim: tizim sozlamasi bo'yicha (Profilda "Yorug'" tanlanmagan bo'lsa) yoki Profilda tanlanganda. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --color-paper: oklch(17.5% 0.01 265);
     --color-surface: oklch(22% 0.012 265);
@@ -98,6 +99,39 @@
     --shadow-float: 0 8px 28px oklch(0% 0 0 / 0.5);
   }
 }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-paper: oklch(17.5% 0.01 265);
+    --color-surface: oklch(22% 0.012 265);
+    --color-sunken: oklch(15% 0.01 265);
+    --color-ink: oklch(94.5% 0.006 90);
+    --color-ink-2: oklch(78% 0.01 265);
+    --color-ink-3: oklch(65% 0.01 265);
+    --color-rule: oklch(30% 0.012 265);
+    --color-rule-strong: oklch(40% 0.012 265);
+    --color-own: oklch(76% 0.11 185);
+    --color-own-soft: oklch(30% 0.045 185);
+    --color-uzum: oklch(76% 0.13 300);
+    --color-uzum-soft: oklch(30% 0.07 300);
+    --color-in: oklch(78% 0.14 150);
+    --color-danger: oklch(73% 0.16 27);
+    --color-danger-soft: oklch(30% 0.07 27);
+    --color-warn: oklch(82% 0.13 80);
+    --color-warn-soft: oklch(32% 0.06 80);
+    --color-primary: oklch(94.5% 0.006 90);
+    --color-primary-hover: oklch(86% 0.008 90);
+    --color-on-primary: oklch(18% 0.012 265);
+    --color-focus: oklch(72% 0.16 255);
+    --color-overlay: oklch(8% 0.01 265 / 0.6);
+    --color-skeleton: oklch(26% 0.012 265);
+    --shadow-raise: 0 1px 2px oklch(0% 0 0 / 0.3);
+    --shadow-float: 0 8px 28px oklch(0% 0 0 / 0.5);
+  }
 
 /* ---------- Asos ---------- */
 *,
@@ -3387,4 +3421,285 @@ body:has(.shell--focus) .toast-region {
     margin: 0;
     padding: 2px 0;
   }
+}
+
+/* ---------- Saralash ---------- */
+.table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  padding: 0;
+}
+
+.table-head__name {
+  display: none;
+}
+
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-3);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sort-btn:hover {
+  background: var(--color-sunken);
+  color: var(--color-ink);
+}
+
+.sort-btn.is-active {
+  color: var(--color-ink);
+  background: var(--color-sunken);
+}
+
+@media (min-width: 720px) {
+  .table-head {
+    display: grid;
+    padding: 0 var(--space-md);
+  }
+
+  .table-head__name {
+    display: block;
+  }
+
+  .sort-btn {
+    justify-content: flex-end;
+    padding: 0 0 0 var(--space-2xs);
+    font-size: var(--text-sm);
+  }
+
+  .sort-btn.is-active,
+  .sort-btn:hover {
+    background: transparent;
+  }
+}
+
+/* ---------- Marketplace tanlash ---------- */
+.scope-btn__logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex: none;
+}
+
+.markets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  padding: 0 var(--space-md) var(--space-sm);
+}
+
+.market {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-sm) var(--space-2xs);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.market:hover {
+  background: var(--color-sunken);
+}
+
+.market.is-active {
+  border-color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.market.is-off .market__logo {
+  filter: grayscale(0.6);
+  opacity: 0.6;
+}
+
+.market__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.market__name {
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.market__meta {
+  font-size: 0.6875rem;
+  color: var(--color-ink-3);
+}
+
+.scope-empty {
+  padding: var(--space-lg) var(--space-md);
+  text-align: center;
+  color: var(--color-ink-3);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Omborga qo'shish (sahifaning o'zida) ---------- */
+.add-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.add-card__rows > li {
+  border-top: 1px solid var(--color-rule);
+}
+
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 56px;
+  padding: var(--space-xs) var(--space-md);
+  cursor: text;
+}
+
+.add-row .thumb {
+  width: 36px;
+  height: 36px;
+}
+
+.add-row__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.add-row__name {
+  font-family: var(--font-data);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-row__now {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-xs);
+  color: var(--color-ink-3);
+}
+
+.add-row__input {
+  width: 84px;
+  height: 44px;
+  flex: none;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: right;
+}
+
+.add-row__input:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.add-row.is-filled {
+  background: var(--color-own-soft);
+}
+
+.add-row.is-filled .add-row__input {
+  border-color: var(--color-own);
+  color: var(--color-own);
+}
+
+/* Pastki panel: tanlangan son va "Saqlash" — doim ko'rinib turadi */
+.add-bar {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--space-xs));
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+}
+
+.add-bar__text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-2);
+}
+
+.add-bar__text b {
+  font-family: var(--font-data);
+  color: var(--color-own);
+  font-size: var(--text-md);
+}
+
+@media (min-width: 960px) {
+  .add-bar {
+    bottom: var(--space-md);
+  }
+}
+
+/* ---------- Ko'rinish (Profil) ---------- */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.theme-picker__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-ink-2);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.theme-picker__option:hover {
+  background: var(--color-sunken);
+}
+
+.theme-picker__option.is-active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }

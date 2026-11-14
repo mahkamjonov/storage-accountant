@@ -11,6 +11,7 @@ import { ErrorBox, SkeletonList } from '../components/ui.tsx';
 import { timeAgo } from '../format.ts';
 import { useAsync } from '../hooks.ts';
 import { useSession } from '../session.tsx';
+import { applyTheme, readTheme, type Theme } from '../theme.ts';
 
 export function ProfilePage() {
   const { user, logout } = useSession();
@@ -37,6 +38,13 @@ export function ProfilePage() {
         <UzumConnection />
       </section>
 
+      <section className="profile-group" aria-labelledby="theme-title">
+        <h2 id="theme-title" className="profile-group__title">
+          Ko'rinish
+        </h2>
+        <ThemePicker />
+      </section>
+
       <button
         type="button"
         className="profile-logout"
@@ -48,6 +56,37 @@ export function ProfilePage() {
         <Icon name="logout" size={20} />
         Chiqish
       </button>
+    </div>
+  );
+}
+
+const THEMES: { id: Theme; label: string; icon: 'sync' | 'sun' | 'moon' }[] = [
+  { id: 'system', label: 'Avto', icon: 'sync' },
+  { id: 'light', label: "Yorug'", icon: 'sun' },
+  { id: 'dark', label: "Qorong'i", icon: 'moon' },
+];
+
+/** Yorug' / qorong'i ko'rinish. "Avto" — telefon yoki kompyuter sozlamasi bo'yicha. */
+function ThemePicker() {
+  const [theme, setTheme] = useState<Theme>(() => readTheme());
+  return (
+    <div className="theme-picker" role="radiogroup" aria-label="Ko'rinish">
+      {THEMES.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          role="radio"
+          aria-checked={theme === t.id}
+          className={`theme-picker__option${theme === t.id ? ' is-active' : ''}`}
+          onClick={() => {
+            applyTheme(t.id);
+            setTheme(t.id);
+          }}
+        >
+          <Icon name={t.icon} size={18} />
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }

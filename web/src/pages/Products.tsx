@@ -1,10 +1,10 @@
 // Mahsulotlar — asosiy sahifa: do'kon tanlash, qidiruv, holat bo'yicha toifalar, ustunlar bo'yicha saralash
 // va shu sahifaning o'zida "Omborga qo'shish" (har bir SKU yoniga son yoziladi, bitta tugma bilan saqlanadi).
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { ProductWithStock, Stock, VariantWithStock } from '../../../domain/index.ts';
 import { api } from '../api.ts';
-import { Icon } from '../components/Icon.tsx';
+import { Icon, type IconName } from '../components/Icon.tsx';
 import { PageHeader } from '../components/Layout.tsx';
 import { matchesVariant } from '../components/ProductPicker.tsx';
 import { ScopePicker } from '../components/ScopePicker.tsx';
@@ -72,6 +72,7 @@ export function ProductsPage() {
   const [adding, setAdding] = useState(false);
   const [qty, setQty] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<ProductWithStock | null>(null);
   const state = useAsync(() => api.products({ all: allShops }), [allShops]);
   const products = useMemo(() => state.data?.products ?? [], [state.data]);
   const shopName = useMemo(() => new Map(shops.map((s) => [s.id, s.name])), [shops]);
@@ -228,6 +229,7 @@ export function ProductsPage() {
                 </button>
               );
             })}
+            <span className="row-menu-spacer" aria-hidden="true" />
           </div>
 
           {adding ? (
@@ -252,6 +254,7 @@ export function ProductsPage() {
                     categoryMeta={category !== 'all' && p.variants.length > 1 ? `${matching.length} ta SKU ${categoryMeta}` : undefined}
                     transit={showTransit}
                     onToggle={() => toggle(p.id)}
+                    onEditCounts={() => setEditing(p)}
                   />
                 );
               })}
@@ -259,6 +262,8 @@ export function ProductsPage() {
           )}
         </>
       )}
+
+      <EditCountsDialog product={editing} onClose={() => setEditing(null)} />
 
       {adding && (
         <div className="add-bar" role="region" aria-label="Omborga qo'shish">
@@ -318,6 +323,7 @@ function ProductCard({
   categoryMeta,
   transit,
   onToggle,
+  onEditCounts,
 }: {
   product: ProductWithStock;
   variants: VariantWithStock[];
@@ -328,6 +334,7 @@ function ProductCard({
   categoryMeta?: string;
   transit: boolean;
   onToggle: () => void;
+  onEditCounts: () => void;
 }) {
   const single = p.variants.length <= 1;
   const lowCount = p.variants.filter(MATCH.low).length;
@@ -335,39 +342,42 @@ function ProductCard({
     ? (p.variants[0]?.attributes.length ? variantName(p.variants[0]) : '') || null
     : `${p.variants.length} ta SKU${lowCount ? ` · ${lowCount} tasi tugayapti` : ''}`;
   const metaText = [shopName, categoryMeta ?? defaultMeta].filter(Boolean).join(' · ');
+  const head = (
+    <>
+      <span className="row__lead">
+        <span className={`card-item__chevron${open ? ' is-open' : ''}`} aria-hidden="true">
+          {!single && <Icon name="expand" size={18} />}
+        </span>
+        <Thumb src={p.image} />
+        <span className="row__main">
+          <span className="row__title">
+            <span className="clamp-2">{p.name}</span>
+          </span>
+          {metaText && <span className="row__meta">{metaText}</span>}
+        </span>
+      </span>
+      <Numbers stock={p.stock} transit={transit ? p.transit : null} low={p.low} />
+    </>
+  );
 
   return (
     <li className="card-item">
       <div className="card-item__head">
-        {!single && (
-          <button
-            type="button"
-            className={`icon-btn card-item__toggle${open ? ' is-open' : ''}`}
-            onClick={onToggle}
-            aria-expanded={open}
-            aria-label={open ? "SKU'larni yopish" : "SKU'larni ko'rsatish"}
-          >
-            <Icon name="expand" size={20} />
+        {/* Kartochka bosilsa — faqat SKU'lari ochiladi/yopiladi. Bitta SKU'li kartochka bosilmaydi. */}
+        {single ? (
+          <div className="row product-row">{head}</div>
+        ) : (
+          <button type="button" className="row row--button product-row" onClick={onToggle} aria-expanded={open}>
+            {head}
           </button>
         )}
-        <Link to={`/mahsulotlar/${p.id}`} className={`row row--link product-row${single ? ' product-row--single' : ''}`}>
-          <span className="row__lead">
-            <Thumb src={p.image} />
-            <span className="row__main">
-              <span className="row__title">
-                <span className="clamp-2">{p.name}</span>
-              </span>
-              {metaText && <span className="row__meta">{metaText}</span>}
-            </span>
-          </span>
-          <Numbers stock={p.stock} transit={transit ? p.transit : null} low={p.low} />
-        </Link>
+        <RowMenu label={p.name} items={[{ label: 'Sonini tahrirlash', icon: 'edit', run: onEditCounts }]} />
       </div>
       {open && !single && (
         <ul className="variant-rows" role="list">
           {variants.map((v) => (
-            <li key={v.id}>
-              <Link to={`/mahsulotlar/${p.id}`} className="row row--link product-row variant-row">
+            <li key={v.id} className="variant-rows__item">
+              <div className="row product-row variant-row">
                 <span className="row__lead">
                   <Thumb src={v.image} />
                   <span className="row__main">
@@ -378,12 +388,192 @@ function ProductCard({
                   </span>
                 </span>
                 <Numbers stock={v.stock} transit={transit ? v.transit : null} low={v.low} />
-              </Link>
+              </div>
+              <span className="row-menu-spacer" aria-hidden="true" />
             </li>
           ))}
         </ul>
       )}
     </li>
+  );
+}
+
+/** "⋯" tugmasi va kichik menyu. Menyu sahifa ustida (fixed) chiziladi — kartochka chegarasida kesilmasin. */
+function RowMenu({ label, items }: { label: string; items: { label: string; icon: IconName; run: () => void }[] }) {
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!pos) return;
+    const close = () => setPos(null);
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && close();
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [pos]);
+
+  return (
+    <>
+      <button
+        ref={btn}
+        type="button"
+        className="icon-btn row-menu-btn"
+        aria-label={`${label}: amallar`}
+        aria-haspopup="menu"
+        aria-expanded={pos !== null}
+        onClick={() => {
+          const r = btn.current!.getBoundingClientRect();
+          setPos(pos ? null : { top: r.bottom + 4, right: window.innerWidth - r.right });
+        }}
+      >
+        <Icon name="more" size={20} />
+      </button>
+      {pos && (
+        <>
+          <div className="menu-backdrop" onClick={() => setPos(null)} />
+          <div className="menu" role="menu" style={{ top: pos.top, right: pos.right }}>
+            {items.map((it) => (
+              <button
+                key={it.label}
+                type="button"
+                role="menuitem"
+                className="menu__item"
+                autoFocus
+                onClick={() => {
+                  setPos(null);
+                  it.run();
+                }}
+              >
+                <Icon name={it.icon} size={18} />
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+/** Ombordagi sonni tahrirlash: har bir SKU uchun hozirgi son, o'zgartirilganlari "Sanab tuzatish" sifatida yoziladi. */
+function EditCountsDialog({ product: p, onClose }: { product: ProductWithStock | null; onClose: () => void }) {
+  const toast = useToast();
+  const ref = useRef<HTMLDialogElement>(null);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (p) {
+      setValues(Object.fromEntries(p.variants.map((v) => [v.id, String(v.stock.own)])));
+      setError(null);
+      if (!d.open) d.showModal();
+    } else if (d.open) d.close();
+  }, [p]);
+
+  const changed = p ? p.variants.filter((v) => values[v.id] !== undefined && values[v.id] !== '' && Number(values[v.id]) !== v.stock.own) : [];
+
+  async function save() {
+    if (!p || !changed.length || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await api.recordBatch({
+        type: 'adjustment',
+        location: 'own',
+        items: changed.map((v) => ({ variantId: v.id, counted: Number(values[v.id]) })),
+      });
+      const ids = result.movements.map((m) => m.id);
+      toast.show({
+        tone: 'ok',
+        message: `Soni yangilandi: ${changed.length} ta SKU`,
+        action: {
+          label: 'Bekor qilish',
+          run: async () => {
+            await api.voidBatch(ids);
+            return 'Bekor qilindi';
+          },
+        },
+      });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <dialog ref={ref} className="dialog count-dialog" onClose={onClose} onCancel={onClose} aria-labelledby="count-title">
+      <div className="dialog__header">
+        <h2 id="count-title" className="dialog__title">
+          Ombordagi soni
+        </h2>
+        <button type="button" className="icon-btn" aria-label="Yopish" onClick={onClose}>
+          <Icon name="close" />
+        </button>
+      </div>
+      {p && (
+        <>
+          <div className="count-dialog__product">
+            <Thumb src={p.image} />
+            <span className="clamp-2">{p.name}</span>
+          </div>
+          <ul className="count-dialog__rows" role="list">
+            {p.variants.map((v) => {
+              const value = values[v.id] ?? '';
+              const diff = value === '' ? 0 : Number(value) - v.stock.own;
+              const label = p.variants.length === 1 && !v.attributes.length ? 'Omborda' : variantName(v);
+              return (
+                <li key={v.id}>
+                  <label className={`add-row${diff !== 0 ? ' is-filled' : ''}`}>
+                    {p.variants.length > 1 && <Thumb src={v.image} />}
+                    <span className="add-row__text">
+                      <span className="add-row__name">{label}</span>
+                      <span className="add-row__now">
+                        Hozir {num(v.stock.own)}
+                        {diff !== 0 && <b className={diff > 0 ? 'is-up' : 'is-down'}> → {diff > 0 ? `+${num(diff)}` : num(diff)}</b>}
+                      </span>
+                    </span>
+                    <input
+                      className="add-row__input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="off"
+                      aria-label={`${label}: omborda nechta`}
+                      value={value}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={nextField}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, 7);
+                        setValues((q) => ({ ...q, [v.id]: clean }));
+                      }}
+                    />
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {error && <p className="notice notice--error">{error}</p>}
+          <div className="dialog__actions">
+            <button type="button" className="btn btn--ghost" onClick={onClose}>
+              Bekor
+            </button>
+            <button type="button" className="btn btn--primary" onClick={save} disabled={!changed.length || saving}>
+              {saving ? 'Saqlanmoqda…' : 'Saqlash'}
+            </button>
+          </div>
+        </>
+      )}
+    </dialog>
   );
 }
 

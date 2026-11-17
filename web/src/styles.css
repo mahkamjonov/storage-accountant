@@ -3703,3 +3703,213 @@ body:has(.shell--focus) .toast-region {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
+
+/* ---------- Mahsulot rasmi: Uzumdagi kabi 3:4, kesilmaydi ---------- */
+.thumb {
+  width: 39px;
+  height: 52px;
+}
+
+.thumb--lg {
+  width: 48px;
+  height: 64px;
+}
+
+.thumb img {
+  object-fit: contain;
+}
+
+.add-row .thumb {
+  width: 30px;
+  height: 40px;
+}
+
+/* ---------- Mahsulotlar: kengroq sahifa ---------- */
+.products-page {
+  max-width: 1320px;
+}
+
+/* ---------- Kartochka: bosilsa SKU'lar ochiladi, oxirida "⋯" menyu ---------- */
+.card-item__head {
+  align-items: center;
+}
+
+.card-item__head > .product-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-item__chevron {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  color: var(--color-ink-3);
+  transform: rotate(-90deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.card-item__chevron.is-open {
+  transform: none;
+}
+
+.row-menu-btn,
+.row-menu-spacer {
+  flex: none;
+  width: 40px;
+}
+
+.row-menu-btn {
+  height: 40px;
+  margin-right: var(--space-2xs);
+  color: var(--color-ink-3);
+}
+
+.row-menu-btn:hover,
+.row-menu-btn[aria-expanded='true'] {
+  color: var(--color-ink);
+  background: var(--color-sunken);
+}
+
+.variant-rows__item {
+  display: flex;
+  align-items: center;
+}
+
+.variant-rows__item > .variant-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.variant-row,
+.product-row--single {
+  padding-left: calc(var(--space-md) + 18px + var(--space-sm));
+}
+
+.table-head .row-menu-spacer {
+  display: none;
+}
+
+@media (min-width: 720px) {
+  .variant-row,
+  .product-row--single {
+    padding-left: calc(var(--space-md) + 18px + var(--space-sm));
+  }
+
+  .table-head {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 96px) 44px;
+  }
+
+  .table-head--4 {
+    grid-template-columns: minmax(0, 1fr) repeat(4, 104px) 44px;
+  }
+
+  .table-head .row-menu-spacer {
+    display: block;
+  }
+}
+
+/* Kichik menyu ("⋯") */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
+.menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 200px;
+  padding: 4px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--color-sunken);
+}
+
+/* Ombordagi sonni tahrirlash oynasi */
+.count-dialog__product {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md) var(--space-sm);
+  font-family: var(--font-data);
+  font-weight: 500;
+}
+
+.count-dialog__rows {
+  max-height: min(55vh, 520px);
+  overflow-y: auto;
+  border-top: 1px solid var(--color-rule);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.count-dialog__rows > li + li {
+  border-top: 1px solid var(--color-rule);
+}
+
+.count-dialog .dialog__actions {
+  padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.count-dialog .notice {
+  margin: var(--space-sm) var(--space-md) 0;
+}
+
+.add-row__now .is-up {
+  color: var(--color-own);
+}
+
+.add-row__now .is-down {
+  color: var(--color-danger);
+}
+
+.count-dialog {
+  padding: var(--space-md) 0 0;
+}
+
+.count-dialog .dialog__header {
+  padding: 0 var(--space-sm) var(--space-sm) var(--space-md);
+}
+
+.count-dialog .dialog__actions {
+  margin-top: 0;
+}
+
+@media (min-width: 720px) {
+  .table-head {
+    column-gap: var(--space-sm);
+  }
+}
+
+/* Ustun sarlavhalari raqamlar ustida tursin: o'ngda "⋯" tugmasi (40px + 4px) va chegara (1px) uchun joy. */
+@media (min-width: 720px) {
+  .table-head {
+    padding-right: calc(var(--space-md) + 45px);
+  }
+
+  .table-head .row-menu-spacer {
+    display: none;
+  }
+}

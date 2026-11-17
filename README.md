@@ -2,15 +2,15 @@
 
 Uzum Market sotuvchisi uchun ombor hisobi. Har bir harakat alohida yozuv bo'lib saqlanadi, qoldiqni esa ilova o'zi hisoblaydi. Qoldiq hech qachon qo'lda tahrirlanmaydi va bazada alohida saqlanmaydi.
 
-- **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Kerak bo'lsa, mahsulot sahifasida "Sanab tuzatish" bor.
+- **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Ombordagi sonni to'g'rilash — kartochka oxiridagi "⋯" menyusida **Sonini tahrirlash**.
 - **Asosiy sahifa — Mahsulotlar**: har bir mahsulot va SKU'dan qayerda nechta borligi (Omborda / Yetkazishda / Uzumda / Jami); ustun nomini bossangiz — ko'pidan kamiga yoki kamidan ko'piga saralanadi. Toifalar sonlari bilan: Barchasi, Tugayapti, Qolmaganlar, Yetkazishdagilar. Sarlavha ostida do'kon tanlanadi: yuqorida marketplace logolari (Uzum; Ozon va Wildberries — tez orada), ostida o'sha marketplace do'konlari yoki "Barcha do'konlar". **Omborga qo'shish** shu sahifaning o'zida: tugma bosilganda har bir SKU yonida son maydoni chiqadi, pastdagi "Saqlash" bilan hammasi bir martada yoziladi. Marketplace'ga ulanmagan do'konlar (masalan, "Mening do'konim") ro'yxatda ko'rinmaydi, ma'lumoti o'chmaydi.
 - **Ko'rinish**: Profilda Avto / Yorug' / Qorong'i.
-- **Yetkazishda**: Uzumda ta'minlash yaratilib nakladnoy yozilganda, undagi sonlar Uzum nakladnoyni qabul qilguncha "Yetkazishda" turadi; qabul qilingach "Uzumda"ga o'tadi. Mahsulotlar ro'yxati va mahsulot sahifasida ko'rinadi.
+- **Yetkazishda**: Uzumda ta'minlash yaratilib nakladnoy yozilganda, undagi sonlar Uzum nakladnoyni qabul qilguncha "Yetkazishda" turadi; qabul qilingach "Uzumda"ga o'tadi. Mahsulotlar ro'yxatida ko'rinadi.
 - **Qolganini Uzum o'zi beradi**: Uzumga jo'natish (nakladnoy), sotuvlar (FBO — Uzum omboridan, **FBS — omborimdan**) va qaytarishlar avtomatik yoziladi.
-- **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon **Profil** sahifasida almashtiriladi.
+- **Har bir do'kon alohida**: Uzumdagi har bir do'kon ilovada alohida; kartochkalar, qoldiq va tarix aralashmaydi. Do'kon Mahsulotlar sarlavhasi ostida almashtiriladi.
 - **Mahsulot = kartochka, ichida SKU'lar** — xuddi Uzumdagidek: "Hoodie" kartochkasi, ichida Qora M, Qora L, Oq M ... Har bir SKU'ning o'z kodi va o'z qoldig'i bor.
 - Telefon uchun qilingan, kompyuterda ham qulay. PWA sifatida telefonga o'rnatsa bo'ladi.
-- Yozuvlar o'chirilmaydi. Xato bo'lsa, yozuv **bekor qilinadi**: qoldiqqa ta'sir qilmaydi, lekin mahsulot sahifasidagi harakatlar ro'yxatida ko'rinib turadi.
+- Yozuvlar o'chirilmaydi. Xato bo'lsa, yozuv **bekor qilinadi**: qoldiqqa ta'sir qilmaydi, lekin bazada saqlanib qoladi.
 - Qoldiq manfiy bo'lolmaydi: ko'p kiritilsa yoki bekor qilish qoldiqni manfiy qilsa, ilova sababini tushuntirib, to'xtatadi.
 
 ## Lokal ishga tushirish
@@ -224,7 +224,7 @@ npm.cmd run uzum:tekshir
 | Qaytarish nakladnoyi yakunlandi (tovar sizga topshirildi) | **Qaytdi**: omborim +, Uzum − | `GET /v1/return` |
 | Katalog: SKU, artikul, Uzumdagi qoldiq | Avtomatik import va "Uzum bilan farq" | `GET /v1/product/shop/{shopId}` |
 
-Uzumdagi har bir hujjat qatori takrorlanmas kalit bilan saqlanadi, shuning uchun qayta yangilashda ikki marta yozilmaydi. Sotuv kaliti "buyurtma + SKU kodi": FBS buyurtma sotuvlar ro'yxatida ham ko'rinsa, bir marta — omborimdan — hisoblanadi. Avtomatik yozuvlar mahsulot sahifasida **Uzum** belgisi va hujjat raqami bilan ko'rinadi.
+Uzumdagi har bir hujjat qatori takrorlanmas kalit bilan saqlanadi, shuning uchun qayta yangilashda ikki marta yozilmaydi. Sotuv kaliti "buyurtma + SKU kodi": FBS buyurtma sotuvlar ro'yxatida ham ko'rinsa, bir marta — omborimdan — hisoblanadi. Avtomatik yozuvlar bazada **Uzum** belgisi va hujjat raqami bilan saqlanadi.
 
 ### Qanday taniydi
 
@@ -240,7 +240,7 @@ Birinchi ulanishda shu kundan boshlab hisoblanadi. Eski hujjatlar boshlang'ich q
 
 ### "Uzumda" soni Uzumnikidan farq qilsa
 
-Mahsulot sahifasida SKU yonida "Uzum: N ta — tuzatish" chiqadi. Bosilsa, Uzumdagi son "Sanab tuzatish" yozuvi sifatida olinadi va tarixda ko'rinadi. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
+Uzumdagi son ilovadagidan farq qilsa, kartochkadagi "⋯" → **Sonini tahrirlash** orqali ombordagi sonni to'g'rilash mumkin. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
 
 ### Haqiqiy Uzum ma'lumotlari bilan tekshirilgan
 

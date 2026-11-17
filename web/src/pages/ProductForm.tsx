@@ -94,7 +94,7 @@ export function NewProductPage() {
         const target = product.variants.length === 1 ? `variant=${product.variants[0]!.id}` : `kartochka=${product.id}`;
         navigate(`${safeNext}${sep}${target}`, { replace: true, state: { from: '/' } });
       } else {
-        navigate(`/mahsulotlar/${product.id}`, { replace: true });
+        navigate('/mahsulotlar', { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

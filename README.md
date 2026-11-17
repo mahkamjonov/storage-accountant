@@ -2,7 +2,7 @@
 
 Uzum Market sotuvchisi uchun ombor hisobi. Har bir harakat alohida yozuv bo'lib saqlanadi, qoldiqni esa ilova o'zi hisoblaydi. Qoldiq hech qachon qo'lda tahrirlanmaydi va bazada alohida saqlanmaydi.
 
-- **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Ombordagi sonni to'g'rilash — kartochka oxiridagi "⋯" menyusida **Sonini tahrirlash**.
+- **Sotuvchi faqat "Omborga qo'shish"ni bosadi.** Kartochkani tanlaydi va uning barcha rang/o'lchamlari uchun sonlarni bitta ekranda yozadi. Ombordagi sonni to'g'rilash — har bir qator oxiridagi "⋮" menyusida **Sonini tahrirlash**: son shu joyning o'zida maydonga aylanadi, Enter yoki "Saqlash" bilan yoziladi.
 - **Asosiy sahifa — Mahsulotlar**: har bir mahsulot va SKU'dan qayerda nechta borligi (Omborda / Yetkazishda / Uzumda / Jami); ustun nomini bossangiz — ko'pidan kamiga yoki kamidan ko'piga saralanadi. Toifalar sonlari bilan: Barchasi, Tugayapti, Qolmaganlar, Yetkazishdagilar. Sarlavha ostida do'kon tanlanadi: yuqorida marketplace logolari (Uzum; Ozon va Wildberries — tez orada), ostida o'sha marketplace do'konlari yoki "Barcha do'konlar". **Omborga qo'shish** shu sahifaning o'zida: tugma bosilganda har bir SKU yonida son maydoni chiqadi, pastdagi "Saqlash" bilan hammasi bir martada yoziladi. Marketplace'ga ulanmagan do'konlar (masalan, "Mening do'konim") ro'yxatda ko'rinmaydi, ma'lumoti o'chmaydi.
 - **Ko'rinish**: Profilda Avto / Yorug' / Qorong'i.
 - **Yetkazishda**: Uzumda ta'minlash yaratilib nakladnoy yozilganda, undagi sonlar Uzum nakladnoyni qabul qilguncha "Yetkazishda" turadi; qabul qilingach "Uzumda"ga o'tadi. Mahsulotlar ro'yxatida ko'rinadi.
@@ -240,7 +240,7 @@ Birinchi ulanishda shu kundan boshlab hisoblanadi. Eski hujjatlar boshlang'ich q
 
 ### "Uzumda" soni Uzumnikidan farq qilsa
 
-Uzumdagi son ilovadagidan farq qilsa, kartochkadagi "⋯" → **Sonini tahrirlash** orqali ombordagi sonni to'g'rilash mumkin. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
+Uzumdagi son ilovadagidan farq qilsa, qatordagi "⋮" → **Sonini tahrirlash** orqali ombordagi sonni to'g'rilash mumkin. Farq odatda nakladnoy hali qabul qilinmaganda yoki Uzum ba'zi tovarni qabul qilmaganda bo'ladi.
 
 ### Haqiqiy Uzum ma'lumotlari bilan tekshirilgan
 
